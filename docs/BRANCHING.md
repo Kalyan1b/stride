@@ -39,3 +39,11 @@ Set Pages to use GitHub Actions. Limit the `github-pages` environment's allowed 
 Protect `test` and `main`: require pull requests, the `Promotion order` and `Validate` status checks, and up-to-date branches; prevent force pushes and branch deletion. Include administrators in those rules if you want to prevent direct pushes even by the repository owner. A solo-maintainer workflow can use zero required reviewer approvals while still requiring PRs and checks.
 
 GitHub protections must actually be applied to enforce these restrictions on direct pushes; workflow files alone cannot prevent someone bypassing the PR process.
+
+## Production rollback and the first approved release
+
+The premature production bootstrap has been reverted. `main` intentionally contains only a production-pending README, and GitHub Pages is unpublished. The application remains on `dev` and `test`.
+
+The production rollback has been acknowledged in `dev` while preserving its full application tree. Continue developing on `dev`, promote it into `test`, and test the release candidate before creating the `test` → `main` PR. This promotion restores the app on `main` only when you choose to release it.
+
+After testing and approving that first release, re-enable GitHub Pages in repository Settings → Pages with GitHub Actions as the source, then merge the approved `test` → `main` PR. Production stays unpublished until that release step is completed.
