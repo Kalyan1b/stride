@@ -150,5 +150,19 @@
     "licenseUrl": "https://unlicense.org/",
     "changes": "Two original photos resized and combined into a looping pose sequence.",
     "images": ["Side_Lateral_Raise/0.jpg", "Side_Lateral_Raise/1.jpg"]
+  },
+  "reverse-lunge": {
+    "source": "https://www.dvidshub.net/video/551833/stationary-reverse-lunge",
+    "license": "Public domain",
+    "licenseUrl": "https://www.dvidshub.net/about/copyright",
+    "credit": "CPT Matthew Holfinger / U.S. Marine Corps / DVIDS",
+    "video": "https://d34w7g4gy10iej.cloudfront.net/video/1709/DOD_104849830/DOD_104849830-1024x576-1769k.mp4",
+    "kind": "footage",
+    "view": "Bodyweight · side view",
+    "changes": "Trimmed to 8 seconds, resized to 640px, converted to a silent looping GIF.",
+    "start": 10,
+    "duration": 8,
+    "endOffset": 2,
+    "disclaimer": "The appearance of U.S. Department of War (DoW) visual information does not imply or constitute DoW endorsement."
   }
 }

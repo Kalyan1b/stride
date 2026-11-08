@@ -156,9 +156,23 @@ export default function ExerciseGuide({ name, onClose }) {
                   setFailed(false);
                 }}
               >
-                {media.kind === 'poses' ? 'End position' : 'Freeze midpoint'}
+                {media.kind === 'poses'
+                  ? 'End position'
+                  : name === 'Reverse lunge'
+                    ? 'Lowered position'
+                    : 'Freeze midpoint'}
               </button>
             </>
+          )}
+          {media && videos?.length > 0 && (
+            <a
+              className="text-button"
+              href={`https://www.youtube.com/watch?v=${videos[0].id}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Watch full tutorial <ExternalLink size={13} />
+            </a>
           )}
           {videos?.length > 1 &&
             videos.map((v, i) => (
@@ -186,6 +200,7 @@ export default function ExerciseGuide({ name, onClose }) {
             Hold this position with steady breathing; a plank is a static exercise.
           </p>
         )}
+        {media?.disclaimer && <p className="media-caption">{media.disclaimer}</p>}
         <h3>How to do it</h3>
         <ol className="guide-steps">
           {steps.map((s) => (

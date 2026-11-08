@@ -41,7 +41,7 @@ Promotion follows **dev → test → main**, through pull requests. There is no 
 
 Profiles, completed sessions, and unfinished workouts stay in this browser's localStorage. No account or backend is required. Refreshing or reopening the app recovers your selected workout, checkmarks, position, and rest timer. Each completion gets its own history record and a snapshot of the plan used. Changing training preferences starts a new plan without assigning old completion checkmarks to it; changing your name or measurements keeps your current plan. Older profile/history keys are read during migration and retained as an original backup. The planner is intended for adults and provides general fitness guidance.
 
-Guides contain 9 full-motion GIFs, 5 photographic pose sequences, and 8 hosted instructor videos. GIFs and photos are local assets; hosted videos require internet access. Reduced-motion users see still images until they choose playback.
+Guides contain 10 full-motion GIFs, 5 photographic pose sequences, and 8 hosted instructor videos. GIFs and photos are local assets; hosted videos require internet access. Reduced-motion users see still images until they choose playback. Reverse lunges include a local full-motion GIF, start/lowered-position stills, and a link to the full instructor tutorial.
 
 Credits, sources, and media licenses appear in the guides and [the attribution catalog](public/exercises/ATTRIBUTION.json). Goulart's wger video derivatives retain CC BY-SA 4.0; public-domain sources are identified separately. These media licenses do not determine the application code's license.
 

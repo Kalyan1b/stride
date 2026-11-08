@@ -311,6 +311,38 @@ try {
     }
   }
   console.log('PASS: all five new exercise guides open and play their attributed demonstrations.');
+  await act(async () =>
+    root.render(
+      React.createElement(ExerciseGuide, {
+        key: 'reverse-lunge',
+        name: 'Reverse lunge',
+        onClose() {},
+      }),
+    ),
+  );
+  const demoImage = () => document.querySelector('.real-demo-stage img');
+  assert.ok(
+    demoImage().src.endsWith('/stride/exercises/reverse-lunge-start.jpg'),
+    'Reduced motion starts with a still',
+  );
+  assert.ok(document.querySelector('.demo-type').textContent.includes('Real-person GIF'));
+  const tutorial = [...document.querySelectorAll('a')].find((link) =>
+    link.textContent.includes('Watch full tutorial'),
+  );
+  assert.equal(tutorial.href, 'https://www.youtube.com/watch?v=xrPteyQLGAo');
+  await click(button('Play GIF'));
+  assert.ok(demoImage().src.endsWith('/stride/exercises/reverse-lunge.gif'));
+  await click(button('Stop GIF'));
+  assert.ok(demoImage().src.endsWith('reverse-lunge-start.jpg'));
+  await click(button('Lowered position'));
+  assert.ok(demoImage().src.endsWith('reverse-lunge-end.jpg'));
+  await act(async () => demoImage().dispatchEvent(new Event('error')));
+  assert.ok(document.querySelector('.media-unavailable'));
+  await click(button('Try again'));
+  assert.ok(demoImage());
+  console.log(
+    'PASS: reverse-lunge GIF playback, pause, still frames, tutorial link, and failure recovery.',
+  );
   console.log(
     'PASS: setup, demonstrations, refresh recovery, paused rest recovery, repeated sessions, plan-change history, corrupt-data recovery, and visible storage failures.',
   );

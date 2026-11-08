@@ -6,6 +6,7 @@ import gifenc from 'gifenc';
 const { GIFEncoder, quantize, applyPalette } = gifenc;
 const cache = '/private/tmp/form-real-demos';
 const config = {
+  'reverse-lunge': { start: 10, duration: 8, endOffset: 2, view: 'Bodyweight · side view' },
   'bodyweight-squat': { start: 13, duration: 8, view: 'Side view' },
   'dumbbell-bench-press': { start: 0, duration: 7, view: 'Side view' },
   'dumbbell-shoulder-press': { start: 0, duration: 8, view: 'Seated variation' },
@@ -41,7 +42,7 @@ for (const [slug, cfg] of Object.entries(config)) {
   if (result.status !== 0) throw Error(result.stderr);
   for (const [suffix, offset] of [
     ['start', 0],
-    ['end', cfg.duration / 2],
+    ['end', cfg.endOffset ?? cfg.duration / 2],
   ]) {
     const r = spawnSync(
       ffmpeg.path,
