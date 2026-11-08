@@ -561,7 +561,7 @@ Object.assign(entries, {
       'Lift your heels slowly, keeping weight over the balls of your feet, and pause briefly.',
       'Lower your heels to the floor with control. Repeat without bouncing.',
     ],
-    'Start with both feet and bodyweight. The video shows the harder single-leg variation; keep both feet down until ready.',
+    'Start with both feet and bodyweight, as shown in the GIF. The optional full tutorial demonstrates a harder single-leg progression.',
   ],
   'Dumbbell lateral raise': [
     null,

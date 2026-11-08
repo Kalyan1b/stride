@@ -360,6 +360,8 @@ try {
     'Standing calf raise',
     'Dumbbell lateral raise',
     'Dumbbell rear-delt fly',
+    'Bird dog',
+    'Prone Y-T raise',
   ]) {
     await act(async () =>
       root.render(React.createElement(ExerciseGuide, { key: name, name, onClose() {} })),
@@ -375,7 +377,45 @@ try {
       assert.ok(!frame.src.includes('undefined'));
     }
   }
-  console.log('PASS: all five new exercise guides open and play their attributed demonstrations.');
+  console.log('PASS: all seven exercise guides open and play their attributed demonstrations.');
+  for (const [name, slug, labels] of [
+    ['Bird dog', 'bird-dog', ['Start position', 'Extended position']],
+    ['Standing calf raise', 'standing-calf-raise', ['Heels down', 'Heels raised']],
+    ['Prone Y-T raise', 'prone-y-t-raise', ['Y position', 'T position']],
+  ]) {
+    await act(async () =>
+      root.render(React.createElement(ExerciseGuide, { key: slug, name, onClose() {} })),
+    );
+    assert.ok(document.querySelector('.real-demo-stage img').src.endsWith(`${slug}-start.jpg`));
+    await click(button('Play GIF'));
+    assert.ok(document.querySelector('.real-demo-stage img').src.endsWith(`${slug}.gif`));
+    await click(button('Stop GIF'));
+    await click(button(labels[1]));
+    assert.ok(document.querySelector('.real-demo-stage img').src.endsWith(`${slug}-end.jpg`));
+    await click(button(labels[0]));
+    assert.ok(document.querySelector('.real-demo-stage img').src.endsWith(`${slug}-start.jpg`));
+    assert.ok(document.querySelector('.media-credit').textContent.includes('View original'));
+    if (slug === 'prone-y-t-raise') {
+      const links = [...document.querySelectorAll('.demo-controls a')];
+      assert.equal(links.length, 2);
+      assert.ok(links[0].href.includes('w1AWGKubE5U'));
+      assert.ok(links[1].href.includes('3GJoiYUYwr0'));
+      assert.ok(document.querySelector('.guide-steps').textContent.includes('One rep'));
+    }
+  }
+  const reducedMotion = window.matchMedia;
+  window.matchMedia = () => ({ matches: false });
+  await act(async () =>
+    root.render(
+      React.createElement(ExerciseGuide, { key: 'bird-autoplay', name: 'Bird dog', onClose() {} }),
+    ),
+  );
+  assert.ok(document.querySelector('.real-demo-stage img').src.endsWith('bird-dog.gif'));
+  window.matchMedia = reducedMotion;
+  console.log(
+    'PASS: three completed GIF guides, reduced motion, autoplay, pause, named still positions, and Y/T tutorial links.',
+  );
+
   await act(async () =>
     root.render(
       React.createElement(ExerciseGuide, {

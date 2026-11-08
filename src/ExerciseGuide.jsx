@@ -48,6 +48,11 @@ export default function ExerciseGuide({ name, onClose }) {
   if (name === 'Dumbbell shoulder press')
     steps[0] =
       'Stand tall with dumbbells near shoulder height. The video shows an optional seated variation if you have a supported bench.';
+  if (name === 'Standing calf raise')
+    steps[0] =
+      'Stand on level ground with feet hip-width apart. Use a wall or stable chair lightly for balance, as shown in the GIF.';
+  if (name === 'Prone Y-T raise')
+    steps.push('One rep is one controlled Y lift followed by one T lift.');
   if (name === 'Goblet squat')
     steps[0] =
       'Hold one dumbbell or kettlebell close to your chest, with feet about shoulder width. The demonstration uses a kettlebell.';
@@ -146,7 +151,8 @@ export default function ExerciseGuide({ name, onClose }) {
                   setFailed(false);
                 }}
               >
-                {media.kind === 'poses' ? 'Start position' : 'Freeze first frame'}
+                {media.positions?.[0] ||
+                  (media.kind === 'poses' ? 'Start position' : 'Freeze first frame')}
               </button>
               <button
                 className="text-button"
@@ -157,28 +163,35 @@ export default function ExerciseGuide({ name, onClose }) {
                   setFailed(false);
                 }}
               >
-                {media.kind === 'poses'
-                  ? 'End position'
-                  : name === 'Reverse lunge'
-                    ? 'Lowered position'
-                    : 'Freeze second position'}
+                {media.positions?.[1] ||
+                  (media.kind === 'poses'
+                    ? 'End position'
+                    : name === 'Reverse lunge'
+                      ? 'Lowered position'
+                      : 'Freeze second position')}
               </button>
             </>
           )}
-          {media && videos?.length > 0 && (
-            <a
-              className="text-button"
-              href={`https://www.youtube.com/watch?v=${videos[0].id}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Watch full tutorial <ExternalLink size={13} />
-            </a>
-          )}
-          {videos?.length > 1 &&
-            videos.map((v, i) => (
+          {media &&
+            videos?.map((tutorial, i) => (
+              <a
+                key={tutorial.id}
+                className="text-button"
+                href={`https://www.youtube.com/watch?v=${tutorial.id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {videos.length > 1
+                  ? `Watch ${i === 0 ? 'Y' : 'T'} tutorial`
+                  : 'Watch full tutorial'}{' '}
+                <ExternalLink size={13} />
+              </a>
+            ))}
+          {!media &&
+            videos?.length > 1 &&
+            videos.map((tutorial, i) => (
               <button
-                key={v.id}
+                key={tutorial.id}
                 className="text-button"
                 aria-pressed={videoIndex === i}
                 onClick={() => {
@@ -221,6 +234,7 @@ export default function ExerciseGuide({ name, onClose }) {
         </div>
         <div className="media-credit">
           <a href={source} target="_blank" rel="noreferrer">
+            {media?.sourceTitle && `${media.sourceTitle} · `}
             {media?.credit || video?.creator} · View original <ExternalLink size={12} />
           </a>
           {media && (

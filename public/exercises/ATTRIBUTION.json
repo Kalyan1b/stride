@@ -231,5 +231,91 @@
     "endOffset": 1.5,
     "width": 480,
     "fps": 10
+  },
+  "bird-dog": {
+    "kind": "footage",
+    "videoType": "youtube",
+    "width": 480,
+    "fps": 10,
+    "licenseVerifiedOn": "2026-11-08",
+    "source": "https://www.youtube.com/watch?v=Tz06xNrh9Rc",
+    "video": "https://www.youtube.com/watch?v=Tz06xNrh9Rc",
+    "sourceTitle": "Four for the Core: Quadraplex",
+    "publisherPage": "https://www.army.mil/aft/",
+    "credit": "U.S. Army / Army Fitness Test",
+    "license": "Public domain (U.S. government work)",
+    "licenseUrl": "https://www.copyright.gov/title17/92chap1.html#105",
+    "licenseEvidence": "Original official Army Fitness Test upload, linked from the Army exercise page.",
+    "view": "Bodyweight · side view",
+    "start": 8.5,
+    "duration": 9.5,
+    "startOffset": 0.5,
+    "endOffset": 4.5,
+    "positions": ["Start position", "Extended position"],
+    "changes": "Joined two correct-form side-view excerpts from the original demonstration, removing the long hold and camera changes. Resized to 480px at 10fps and converted to a silent looping GIF. All frames are original footage.",
+    "disclaimer": "The appearance of U.S. Department of War (DoW) visual information does not imply or constitute DoW endorsement.",
+    "segments": [
+      {
+        "start": 8.5,
+        "duration": 5
+      },
+      {
+        "start": 24,
+        "duration": 4.5
+      }
+    ]
+  },
+  "standing-calf-raise": {
+    "kind": "footage",
+    "videoType": "youtube",
+    "width": 480,
+    "fps": 10,
+    "licenseVerifiedOn": "2026-11-08",
+    "source": "https://www.youtube.com/watch?v=sQsLs8LsLr4",
+    "video": "https://www.youtube.com/watch?v=sQsLs8LsLr4",
+    "sourceTitle": "Calf Raises",
+    "publisherPage": "https://www.marattmd.com/learn/rehab-tha-calf-raises.php",
+    "credit": "Motion / Joseph Maratt, MD",
+    "license": "Creative Commons Attribution (YouTube)",
+    "licenseUrl": "https://www.youtube.com/t/creative_commons",
+    "licenseEvidence": "Original upload explicitly marked “Creative Commons Attribution license (reuse allowed)”.",
+    "view": "Bodyweight · light chair support",
+    "start": 8,
+    "duration": 4.8,
+    "startOffset": 0,
+    "endOffset": 1,
+    "positions": ["Heels down", "Heels raised"],
+    "changes": "Joined the side-view rise and lowering excerpts, omitting other camera angles. Resized to 480px at 10fps and converted to a silent looping GIF. Original clinical instructions are not reproduced.",
+    "segments": [
+      {
+        "start": 8,
+        "duration": 2.5
+      },
+      {
+        "start": 15.5,
+        "duration": 2.3
+      }
+    ]
+  },
+  "prone-y-t-raise": {
+    "kind": "footage",
+    "videoType": "youtube",
+    "width": 480,
+    "fps": 10,
+    "licenseVerifiedOn": "2026-11-08",
+    "source": "https://www.youtube.com/watch?v=z0oLEufwRno",
+    "video": "https://www.youtube.com/watch?v=z0oLEufwRno",
+    "sourceTitle": "How to do a Prone YTI on Floor",
+    "credit": "Emily Sopo / Get Strong with Emily / Heartmybody Fitness",
+    "license": "Creative Commons Attribution (YouTube)",
+    "licenseUrl": "https://www.youtube.com/t/creative_commons",
+    "licenseEvidence": "Original upload explicitly marked “Creative Commons Attribution license (reuse allowed)”.",
+    "view": "Floor variation · Y followed by T",
+    "start": 0.5,
+    "duration": 5.7,
+    "startOffset": 1.5,
+    "endOffset": 4.5,
+    "positions": ["Y position", "T position"],
+    "changes": "Silent Y-and-T excerpt from the original YTI demonstration; I portion omitted. Resized to 480px at 10fps and converted to a looping GIF. Original creator mark retained."
   }
 }

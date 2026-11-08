@@ -13,6 +13,8 @@ const cache = join(tmpdir(), 'stride-demo-sources');
 await mkdir(cache, { recursive: true });
 const records = JSON.parse(await readFile(new URL('src/realExerciseMedia.json', root)));
 const selected = process.argv[2];
+const localSource = process.argv[3];
+if (localSource && !selected) throw Error('A local source must be paired with an exercise slug.');
 if (selected && !Object.hasOwn(records, selected))
   throw Error(`Unknown exercise slug: ${selected}`);
 async function download(url, name) {
@@ -34,24 +36,42 @@ for (const [slug, record] of Object.entries(records)) {
   if (selected && slug !== selected) continue;
   const output = (suffix) => new URL(`public/exercises/${slug}${suffix}`, root).pathname;
   if (record.kind === 'footage') {
-    const source = await download(record.video, `${slug}.source`),
+    const source =
+        localSource ||
+        (record.videoType === 'youtube'
+          ? (() => {
+              throw Error(
+                `Download the licensed original ${record.video} and pass its local MP4 path: node scripts/build-real-demos.mjs ${slug} /path/to/source.mp4`,
+              );
+            })()
+          : await download(record.video, `${slug}.source`)),
       width = record.width || 640,
       fps = record.fps || 12;
+    const segments = record.segments;
+    const input = segments
+      ? ['-i', source]
+      : ['-ss', String(record.start), '-t', String(record.duration), '-i', source];
+    const assembly = segments
+      ? segments
+          .map(
+            (segment, i) =>
+              `[0:v]trim=start=${segment.start}:duration=${segment.duration},setpts=PTS-STARTPTS[clip${i}]`,
+          )
+          .join(';') +
+        ';' +
+        segments.map((_, i) => `[clip${i}]`).join('') +
+        `concat=n=${segments.length}:v=1:a=0,`
+      : '';
     run([
-      '-ss',
-      String(record.start),
-      '-t',
-      String(record.duration),
-      '-i',
-      source,
+      ...input,
       '-filter_complex',
-      `fps=${fps},scale=${width}:-2:flags=lanczos,setsar=1,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`,
+      `${assembly}fps=${fps},scale=${width}:-2:flags=lanczos,setsar=1,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`,
       '-loop',
       '0',
       output('.gif'),
     ]);
     for (const [suffix, offset] of [
-      ['start', 0],
+      ['start', record.startOffset || 0],
       ['end', record.endOffset ?? record.duration / 2],
     ])
       run([
