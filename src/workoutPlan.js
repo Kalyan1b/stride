@@ -1,3 +1,10 @@
+import {
+  movement,
+  exerciseAllowed,
+  structureExercise,
+  fitSession,
+  estimateMinutes,
+} from './training.js';
 export const defaultProfile = {
   name: 'Alex',
   height: 175,
@@ -7,6 +14,10 @@ export const defaultProfile = {
   experience: 'Beginner',
   equipment: 'Full gym',
   days: 3,
+  sessionMinutes: 45,
+  preferredDays: [],
+  limitations: [],
+  excludedExercises: [],
 };
 export const weekdays = [
   'Monday',
@@ -29,12 +40,13 @@ export const equipmentRequirements = {
   'Dumbbell lateral raise': ['dumbbells'],
   'Dumbbell rear-delt fly': ['dumbbells'],
 };
-const exercise = (name, prescription, focus) => ({
-  name,
-  prescription,
-  focus,
-  requiredEquipment: equipmentRequirements[name] || [],
-});
+const exercise = (name, prescription, focus) =>
+  structureExercise({
+    name,
+    prescription,
+    focus,
+    requiredEquipment: equipmentRequirements[name] || [],
+  });
 export function availableEquipment(profile) {
   if (profile.equipment === 'Full gym') return ['dumbbells', 'bench', 'cable', 'step'];
   return [
@@ -42,6 +54,49 @@ export function availableEquipment(profile) {
     ...(profile.hasBench ? ['bench'] : []),
     ...(profile.hasStep ? ['step'] : []),
   ];
+}
+export function alternatives(item, input) {
+  const profile = normalizeProfile(input),
+    available = availableEquipment(profile);
+  return Object.keys(movement)
+    .filter(
+      (name) =>
+        name !== item.name &&
+        movement[name][0] === movement[item.name]?.[0] &&
+        exerciseAllowed(name, profile) &&
+        (equipmentRequirements[name] || []).every((required) => available.includes(required)),
+    )
+    .map((name) =>
+      exercise(
+        name,
+        name === 'Plank'
+          ? '2 holds · 20–30 sec'
+          : name === 'Brisk walk or cycle'
+            ? '15 minutes'
+            : name === 'Gentle full-body stretch'
+              ? '5 minutes'
+              : `${item.sets || 2} sets · 8–12 reps${['Reverse lunge', 'Split squat', 'Bird dog', 'Dead bug', 'Step-up'].includes(name) ? ' / side' : ''}`,
+        movement[name][2],
+      ),
+    );
+}
+export function applySwaps(workout, swaps, profile) {
+  const used = new Set();
+  const exercises = workout.exercises.map((item, index) => {
+    const replacement = alternatives(item, profile).find(
+      (option) => option.name === swaps?.[index],
+    );
+    const chosen =
+      replacement &&
+      !used.has(replacement.name) &&
+      !workout.exercises.some((other, i) => i !== index && other.name === replacement.name)
+        ? replacement
+        : item;
+    used.add(chosen.name);
+    return chosen;
+  });
+  const fitted = fitSession(exercises, profile.sessionMinutes);
+  return { ...workout, exercises: fitted, minutes: estimateMinutes(fitted) };
 }
 export function buildPlan(input) {
   const profile = normalizeProfile(input);
@@ -117,24 +172,27 @@ export function buildPlan(input) {
   const fullB = [splitSquat, upper[2], upper[1], hinge];
   const conditioningB = [cardio[0], calves, lower[2], cardio[3]];
   const conditioningC = [cardio[0], upper[3], splitSquat, cardio[3]];
-  // Two-day muscle plans train the whole body on both days.
+  const upperA = [
+    home ? 'Upper body & core' : 'Upper body strength',
+    [upper[0], upper[1], upper[2], home ? upper[3] : lateral],
+    'Strength',
+  ];
+  const lowerA = ['Lower body strength', [lower[0], hinge, lower[2], calves], 'Strength'];
   const strengthDays =
     profile.days === 2
       ? [
           ['Full-body strength', full, 'Strength'],
           ['Full-body · shoulders & hinge', fullB, 'Strength'],
         ]
-      : [
-          [
-            home ? 'Upper body & core' : 'Upper body strength',
-            [upper[0], upper[1], upper[2], home ? upper[3] : lateral],
-            'Strength',
-          ],
-          ['Lower body strength', [lower[0], hinge, lower[2], calves], 'Strength'],
-          ['Full-body strength', full, 'Strength'],
-          ['Shoulders & upper body', upperB, 'Strength'],
-          ['Lower body · single-leg focus', lowerB, 'Strength'],
-        ];
+      : profile.days === 3
+        ? [upperA, lowerA, ['Full-body strength', full, 'Strength']]
+        : [
+            upperA,
+            lowerA,
+            ['Shoulders & upper body', upperB, 'Strength'],
+            ['Lower body · single-leg focus', lowerB, 'Strength'],
+            ['Strength & mobility', mobility, 'Mobility'],
+          ];
   const balancedDays = [
     ['Full-body strength', full, 'Strength'],
     ['Cardio & core', cardio, 'Cardio'],
@@ -149,23 +207,59 @@ export function buildPlan(input) {
     ['Strength & mobility', mobility, 'Mobility'],
     ['Easy conditioning', conditioningB, 'Cardio'],
   ];
-  const days = schedules[Number(profile.days)] || schedules[3];
-  const workouts =
-    profile.goal === 'Build muscle'
-      ? strengthDays
+  const fatLossDays =
+    profile.days === 2
+      ? [
+          ['Full-body strength', full, 'Strength'],
+          ['Full-body · strength & control', fullB, 'Strength'],
+        ]
+      : [
+          ['Full-body strength', full, 'Strength'],
+          ['Cardio & core', cardio, 'Cardio'],
+          ['Full-body · strength & control', fullB, 'Strength'],
+          ['Easy conditioning', conditioningB, 'Cardio'],
+          ['Strength & mobility', mobility, 'Mobility'],
+        ];
+  const days =
+    profile.preferredDays.length === profile.days ? profile.preferredDays : schedules[profile.days];
+  const workouts = ['Build muscle', 'Get stronger'].includes(profile.goal)
+    ? strengthDays
+    : profile.goal === 'Lose fat'
+      ? fatLossDays
       : profile.goal === 'Improve endurance'
         ? enduranceDays
         : balancedDays;
   return days.map((day, index) => {
-    const [title, exercises, type] = workouts[index];
+    const [title, original, type] = workouts[index];
+    const used = new Set();
+    const chosen = original.flatMap((item) => {
+      const options = [item, ...alternatives(item, profile)];
+      const candidate = options.find(
+        (option) => exerciseAllowed(option.name, profile) && !used.has(option.name),
+      );
+      if (!candidate) return [];
+      used.add(candidate.name);
+      return [candidate];
+    });
+    const exercises = fitSession(chosen, profile.sessionMinutes);
     return {
       id: index,
       day,
-      title,
+      title: chosen.length < original.length ? `Adapted · ${title}` : title,
       exercises,
       type,
-      minutes:
-        type === 'Mobility' ? 25 : type === 'Cardio' && profile.experience !== 'Beginner' ? 45 : 35,
+      minutes: estimateMinutes(exercises),
+      adapted:
+        chosen.length < original.length ||
+        chosen.some((item, i) => item.name !== original[i]?.name),
+      reason:
+        type === 'Strength'
+          ? profile.goal === 'Lose fat'
+            ? 'Strength practice supports your muscle-focused goal alongside conditioning.'
+            : 'Repeat these movement patterns and use your logged sets to build strength over time.'
+          : type === 'Cardio'
+            ? 'Comfortable conditioning builds your ability to sustain activity.'
+            : 'An easier session for movement practice and recovery.',
     };
   });
 }
@@ -195,7 +289,7 @@ export function saveStored(key, value) {
 }
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const choices = {
-  goal: ['Build muscle', 'Lose fat', 'Improve endurance', 'Stay active'],
+  goal: ['Build muscle', 'Lose fat', 'Get stronger', 'Improve endurance', 'Stay active'],
   experience: ['Beginner', 'Intermediate', 'Experienced'],
   equipment: ['Full gym', 'Dumbbells', 'Bodyweight only'],
 };
@@ -218,6 +312,31 @@ export function normalizeProfile(value) {
     if (options.includes(input[field])) profile[field] = input[field];
   }
   if ([2, 3, 4, 5].includes(Number(input.days))) profile.days = Number(input.days);
+  profile.sessionMinutes = [20, 30, 45, 60].includes(Number(input.sessionMinutes))
+    ? Number(input.sessionMinutes)
+    : 45;
+  profile.preferredDays = Array.isArray(input.preferredDays)
+    ? [
+        ...new Set(
+          input.preferredDays.filter((day) => Number.isInteger(day) && day >= 0 && day < 7),
+        ),
+      ]
+        .sort((a, b) => a - b)
+        .slice(0, 5)
+    : [];
+  if (profile.preferredDays.length !== profile.days) profile.preferredDays = [];
+  profile.limitations = Array.isArray(input.limitations)
+    ? [
+        ...new Set(
+          input.limitations.filter((tag) =>
+            ['floor', 'overhead', 'kneeling', 'singleLeg'].includes(tag),
+          ),
+        ),
+      ]
+    : [];
+  profile.excludedExercises = Array.isArray(input.excludedExercises)
+    ? [...new Set(input.excludedExercises.filter((name) => Object.hasOwn(movement, name)))]
+    : [];
   profile.hasBench = profile.equipment === 'Full gym' || input.hasBench === true;
   profile.hasStep = profile.equipment === 'Full gym' || input.hasStep === true;
   return profile;
@@ -292,6 +411,44 @@ export function normalizeHistory(history) {
           .map((e) => ({ name: e.name.slice(0, 100), prescription: e.prescription.slice(0, 100) })),
       };
     }
+    record.status = item.status === 'partial' ? 'partial' : 'complete';
+    if (Array.isArray(item.performance))
+      record.performance = item.performance
+        .slice(0, 30)
+        .filter(
+          (entry) =>
+            isObject(entry) &&
+            Object.hasOwn(movement, entry.name) &&
+            ['reps', 'sec', 'min'].includes(entry.unit),
+        )
+        .map((entry) => ({
+          name: entry.name,
+          unit: entry.unit,
+          perSide: entry.perSide === true,
+          effort: ['easy', 'right', 'hard'].includes(entry.effort) ? entry.effort : '',
+          skipped: typeof entry.skipped === 'string' ? entry.skipped.slice(0, 100) : '',
+          sets: Array.isArray(entry.sets)
+            ? entry.sets
+                .slice(0, 12)
+                .filter(
+                  (row) =>
+                    isObject(row) &&
+                    Number.isFinite(Number(row.value)) &&
+                    Number(row.value) > 0 &&
+                    Number(row.value) <=
+                      (entry.unit === 'reps' ? 200 : entry.unit === 'sec' ? 3600 : 120) &&
+                    (entry.unit !== 'reps' || Number.isInteger(Number(row.value))) &&
+                    (row.weight === '' ||
+                      (Number.isFinite(Number(row.weight)) &&
+                        Number(row.weight) >= 0 &&
+                        Number(row.weight) <= 500)),
+                )
+                .map((row) => ({
+                  value: String(row.value),
+                  weight: row.weight === '' ? '' : String(row.weight),
+                }))
+            : [],
+        }));
     unique.set(record.id, record);
   }
   return [...unique.values()];

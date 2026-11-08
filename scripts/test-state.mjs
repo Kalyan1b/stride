@@ -20,6 +20,7 @@ import {
   startRest,
   pauseRest,
   resumeRest,
+  resolvedWorkout,
 } from '../src/appState.js';
 import { exerciseGuides } from '../src/exerciseData.js';
 const data = new Map();
@@ -34,8 +35,26 @@ const fresh = () => {
   data.clear();
   return loadAppState().state;
 };
-const completed = (state) =>
-  updateDraft(state, state.active, { done: [0, 1, 2, 3], index: 3, started: true });
+const completed = (state) => {
+  const workout = resolvedWorkout(state, state.active);
+  return updateDraft(state, state.active, {
+    index: 3,
+    started: true,
+    logs: Object.fromEntries(
+      workout.exercises.map((item) => [
+        item.name,
+        {
+          effort: 'right',
+          sets: Array.from({ length: item.sets }, () => ({
+            value: String(item.max),
+            weight: item.unit === 'reps' ? '10' : '',
+            done: true,
+          })),
+        },
+      ]),
+    ),
+  });
+};
 const now = new Date(2026, 10, 2, 12);
 let state = fresh();
 assert.equal(completeWorkout(state, now), state, 'Incomplete sessions cannot be logged');
@@ -95,7 +114,7 @@ assert.equal(
     },
     state.profile,
   )[0].done.length,
-  1,
+  0,
 );
 assert.equal(
   normalizeDrafts({ 0: { done: [], index: 0, rest: running } }, state.profile, 121000)[0].rest,

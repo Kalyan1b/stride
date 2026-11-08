@@ -1,3 +1,5 @@
+import RoutinePreferences from './RoutinePreferences';
+import { buildPlan } from './workoutPlan';
 import HeightInput from './HeightInput';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -12,14 +14,31 @@ import {
   X,
 } from 'lucide-react';
 const goals = [
-  { name: 'Build muscle', copy: 'Get stronger, one rep at a time.', Icon: Dumbbell },
-  { name: 'Lose fat', copy: 'Build a consistent movement habit.', Icon: Flame },
+  {
+    name: 'Build muscle',
+    title: 'Build muscle & gain weight',
+    copy: 'Progressive strength practice. Exercise supports your goal; bodyweight changes aren’t guaranteed.',
+    Icon: Dumbbell,
+  },
+  {
+    name: 'Lose fat',
+    title: 'Lose fat & keep muscle',
+    copy: 'Keep strength training central, with conditioning alongside it.',
+    Icon: Flame,
+  },
+  {
+    name: 'Get stronger',
+    title: 'Get stronger & maintain weight',
+    copy: 'Build performance without a bodyweight target.',
+    Icon: Dumbbell,
+  },
   { name: 'Improve endurance', copy: 'Go a little further. Feel more capable.', Icon: Target },
   { name: 'Stay active', copy: 'Move more and feel good every day.', Icon: Heart },
 ];
 export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
   const [draft, setDraft] = useState(profile),
     [step, setStep] = useState(0);
+  const [error, setError] = useState('');
   const dialog = useRef(null),
     heading = useRef(null);
   useEffect(() => {
@@ -40,7 +59,21 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
   function next(e) {
     e.preventDefault();
     if (step < 2) setStep(step + 1);
-    else onSave({ ...draft, name: draft.name.trim(), days: Number(draft.days) });
+    else {
+      if (draft.preferredDays?.length && draft.preferredDays.length !== Number(draft.days)) {
+        setError(
+          `Choose exactly ${draft.days} training days, or uncheck all days for an automatic schedule.`,
+        );
+        return;
+      }
+      if (buildPlan(draft).some((workout) => !workout.exercises.length)) {
+        setError(
+          'These exclusions leave a session with no suitable exercises. Review your equipment or movement preferences.',
+        );
+        return;
+      }
+      onSave({ ...draft, name: draft.name.trim(), days: Number(draft.days) });
+    }
   }
   return (
     <dialog
@@ -86,7 +119,7 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
         <form onSubmit={next}>
           {step === 0 && (
             <div className="goal-options">
-              {goals.map(({ name, copy, Icon }) => (
+              {goals.map(({ name, title, copy, Icon }) => (
                 <label key={name} className={`goal-option ${draft.goal === name ? 'chosen' : ''}`}>
                   <input
                     type="radio"
@@ -99,7 +132,7 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
                     <Icon size={23} />
                   </span>
                   <span>
-                    <b>{name}</b>
+                    <b>{title || name}</b>
                     <small>{copy}</small>
                   </span>
                   <span className="radio-mark">{draft.goal === name && <span />}</span>
@@ -206,7 +239,10 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
                         name="days"
                         value={day}
                         checked={Number(draft.days) === day}
-                        onChange={() => update('days', day)}
+                        onChange={() => {
+                          update('days', day);
+                          update('preferredDays', []);
+                        }}
                       />
                       <b>{day}</b>
                       <span>days</span>
@@ -218,6 +254,12 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
                   completed workouts stay in your history.
                 </p>
               </fieldset>
+              <RoutinePreferences draft={draft} update={update} />
+              {error && (
+                <p className="setup-error" role="alert">
+                  {error}
+                </p>
+              )}
             </div>
           )}
           <div className="setup-actions">

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X, Play, Pause, ExternalLink, Video, Image as ImageIcon } from 'lucide-react';
 import { exerciseGuides as entries, guideSlug } from './exerciseData';
 import mediaCatalog from './realExerciseMedia.json';
+import { exerciseCoaching } from './exerciseCoaching';
 import { publicAsset } from './assets';
 
 export const tutorials = {
@@ -160,7 +161,7 @@ export default function ExerciseGuide({ name, onClose }) {
                   ? 'End position'
                   : name === 'Reverse lunge'
                     ? 'Lowered position'
-                    : 'Freeze midpoint'}
+                    : 'Freeze second position'}
               </button>
             </>
           )}
@@ -211,6 +212,13 @@ export default function ExerciseGuide({ name, onClose }) {
           <b>Form tip</b>
           {tip}
         </p>
+        <div className="training-advice">
+          <b>Make it easier</b>
+          <p>{exerciseCoaching[name]?.[0]}</p>
+          <b>Common mistake to avoid</b>
+          <p>{exerciseCoaching[name]?.[1]}</p>
+          <p>Stop if the movement hurts. An easier variation is not a treatment for an injury.</p>
+        </div>
         <div className="media-credit">
           <a href={source} target="_blank" rel="noreferrer">
             {media?.credit || video?.creator} · View original <ExternalLink size={12} />

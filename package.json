@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node scripts/test-state.mjs && node scripts/test-app.mjs",
+    "test": "node scripts/test-state.mjs && node scripts/test-training.mjs && node scripts/test-media.mjs && node scripts/test-app.mjs",
     "build:pages": "node scripts/build-pages.mjs"
   },
   "dependencies": {

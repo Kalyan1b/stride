@@ -47,6 +47,7 @@ assert.deepEqual(normalizeHistory(['2026-10-31-2'])[0], {
   date: '2026-10-31',
   workoutId: 2,
   title: 'Workout completed',
+  status: 'complete',
 });
 console.log(
   `PASS: ${combinations} goal, experience, equipment, and schedule combinations; local dates and legacy progress migration.`,
@@ -211,7 +212,19 @@ try {
   assert.ok(document.querySelector('.warmup-list'));
   await click(button('I’m warmed up. Let’s go'));
   assert.equal(document.querySelector('.session-heading-row h2').textContent, 'Bodyweight squat');
-  await click(button('Complete & next'));
+  async function logCurrentExercise() {
+    const rows = document.querySelectorAll('.set-row');
+    for (let i = 0; i < rows.length; i++) {
+      const row = document.querySelectorAll('.set-row')[i];
+      const field = row.querySelector('input');
+      if (!field.disabled) {
+        await setInput(field, '12');
+        await click(row.querySelector('button'));
+      }
+    }
+    await click(button('About right'));
+  }
+  await logCurrentExercise();
   assert.ok(document.querySelector('.rest-timer'));
   await click(document.querySelector('[aria-label="Pause rest timer"]'));
   assert.ok(document.querySelector('[aria-label="Resume rest timer"]'));
@@ -229,8 +242,8 @@ try {
 
   assert.equal(
     document.querySelector('.session-heading-row h2').textContent,
-    'Push-up',
-    'Closing and reopening should preserve checked exercises',
+    'Bodyweight squat',
+    'Closing and reopening should preserve logged sets',
   );
   await click(document.querySelector('[aria-label="Resume rest timer"]'));
   const actualNow = Date.now;
@@ -245,9 +258,12 @@ try {
   } finally {
     Date.now = actualNow;
   }
-  await click(button('Complete & next'));
-  await click(button('Complete & next'));
-  await click(button('Mark exercise complete'));
+  await click(button('Next exercise'));
+  await logCurrentExercise();
+  await click(button('Next exercise'));
+  await logCurrentExercise();
+  await click(button('Next exercise'));
+  await logCurrentExercise();
   await click(button('Finish workout'));
   assert.ok(document.querySelector('.celebration-dialog[open]'));
   assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).history.length, 1);
@@ -272,10 +288,10 @@ try {
   await click(button('Home', document.querySelector('.sidebar nav')));
   await click(button('Start session'));
   await click(button('I’m warmed up. Let’s go'));
-  await click(button('Complete & next'));
-  await click(button('Complete & next'));
-  await click(button('Complete & next'));
-  await click(button('Mark exercise complete'));
+  for (let i = 0; i < 4; i++) {
+    await logCurrentExercise();
+    if (i < 3) await click(button('Next exercise'));
+  }
   await click(button('Finish workout'));
   await click(button('See my progress', document.querySelector('.celebration-dialog')));
   const sessions = JSON.parse(localStorage.getItem(STORAGE_KEY)).history;
@@ -314,6 +330,7 @@ try {
   // Corrupt saved profile fields must never crash the app or produce an invalid BMI.
   await act(async () => root.unmount());
   root = null;
+  const healthyState = JSON.parse(localStorage.getItem(STORAGE_KEY));
   const broken = JSON.parse(localStorage.getItem(STORAGE_KEY));
   broken.profile = { ...broken.profile, name: null, height: 0, weight: 'invalid', days: 99 };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(broken));
@@ -350,10 +367,8 @@ try {
     assert.equal(document.querySelector('#guide-title').textContent, name);
     assert.ok(document.querySelector('.guide-dialog[open]'));
     await click(button('Play'));
-    if (name === 'Dumbbell lateral raise') {
-      assert.ok(
-        document.querySelector('.real-demo-stage img').src.endsWith('dumbbell-lateral-raise.gif'),
-      );
+    if (document.querySelector('.real-demo-stage img')) {
+      assert.ok(document.querySelector('.real-demo-stage img').src.endsWith('.gif'));
     } else {
       const frame = document.querySelector('iframe');
       assert.ok(frame.src.startsWith('https://www.youtube-nocookie.com/embed/'));
@@ -393,6 +408,76 @@ try {
   console.log(
     'PASS: reverse-lunge GIF playback, pause, still frames, tutorial link, and failure recovery.',
   );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(healthyState));
+  await act(async () => root.render(React.createElement(App)));
+  await click(document.querySelector('.profile-button'));
+  await submit();
+  await submit();
+  const timeSelect = [...document.querySelectorAll('.setup-dialog select')].find((select) =>
+    select.textContent.includes('Up to 20 minutes'),
+  );
+  await act(async () => {
+    timeSelect.value = '20';
+    timeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  const dayBoxes = () => document.querySelectorAll('.weekday-options input');
+  await click(dayBoxes()[1]);
+  await submit();
+  assert.ok(document.querySelector('.setup-error').textContent.includes('exactly 2'));
+  await click(dayBoxes()[3]);
+  const overhead = [...document.querySelectorAll('.preference-field label')].find((label) =>
+    label.textContent.includes('Avoid overhead'),
+  );
+  await click(overhead.querySelector('input'));
+  await submit();
+  let current = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  assert.equal(current.profile.sessionMinutes, 20);
+  assert.deepEqual(current.profile.preferredDays, [1, 3]);
+  assert.ok(current.profile.limitations.includes('overhead'));
+  await click(document.querySelector('.schedule-editor summary'));
+  const dateInput = document.querySelector('.schedule-list input');
+  await setInput(dateInput, '2026-12-10');
+  assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).scheduledDates[0], '2026-12-10');
+  await click(button('Resume from today'));
+  await click(button('Start session'));
+  await click(button('I’m warmed up. Let’s go'));
+  const swapSelect = document.querySelector('[aria-label="Swap exercise"]');
+  assert.ok([...swapSelect.options].some((option) => option.value === 'Bodyweight squat'));
+  await act(async () => {
+    swapSelect.value = 'Bodyweight squat';
+    swapSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  assert.equal(document.querySelector('.session-heading-row h2').textContent, 'Bodyweight squat');
+  const logButton = document.querySelector('[aria-label="Log set 1"]');
+  assert.equal(logButton.disabled, true);
+  await setInput(document.querySelector('[aria-label="Set 1 reps"]'), '10');
+  await click(document.querySelector('[aria-label="Log set 1"]'));
+  assert.equal(document.querySelector('[aria-label="Swap exercise"]').disabled, true);
+  assert.equal(button('Next exercise').disabled, true, 'One logged set cannot finish the exercise');
+  for (let i = 0; i < 4; i++) {
+    const skip = document.querySelector('[aria-label="Skip exercise reason"]');
+    await act(async () => {
+      skip.value = 'Pain or discomfort';
+      skip.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    if (i < 3) await click(button('Next exercise'));
+  }
+  await click(button('Save partial session'));
+  assert.ok(document.querySelector('.activity-list').textContent.includes('Partial session'));
+  current = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  assert.equal(current.history.at(-1).status, 'partial');
+  assert.equal(current.history.at(-1).performance[0].name, 'Bodyweight squat');
+  assert.equal(current.history.at(-1).performance[0].sets[0].value, '10');
+  const performanceSelect = document.querySelector('[aria-label="Performance exercise"]');
+  await act(async () => {
+    performanceSelect.value = 'Bodyweight squat';
+    performanceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  assert.ok(document.querySelector('.performance-table').textContent.includes('10 reps'));
+  console.log(
+    'PASS: setup time/day/limitation validation, moving sessions, exercise swaps, set completion guards, partial-session results, and performance history.',
+  );
+
   console.log(
     'PASS: setup, demonstrations, refresh recovery, paused rest recovery, repeated sessions, plan-change history, corrupt-data recovery, and visible storage failures.',
   );

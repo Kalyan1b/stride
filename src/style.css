@@ -3969,3 +3969,241 @@ dialog::backdrop {
 .height-field .form-hint {
   margin-top: 8px;
 }
+/* Workout logging, preferences, and flexible scheduling. */
+.training-advice,
+.program-reason {
+  background: #f7f4eb;
+  border-radius: 12px;
+  padding: 14px 18px;
+  color: #5a6254;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 14px 0;
+}
+.training-advice p {
+  margin: 6px 0;
+}
+.session-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 18px 0;
+}
+.session-tools label,
+.skip-exercise,
+.performance-history label,
+.schedule-list label {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  color: #626a58;
+}
+.session-tools select,
+.skip-exercise select,
+.performance-history select,
+.schedule-list input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px;
+  border: 1px solid #d8dccf;
+  border-radius: 8px;
+  background: #fff;
+  color: #34452e;
+  font: inherit;
+}
+.set-log {
+  margin: 20px 0 8px;
+}
+.set-labels,
+.set-row {
+  display: grid;
+  grid-template-columns: 30px minmax(55px, 1fr) minmax(65px, 1fr) minmax(65px, auto);
+  gap: 9px;
+  align-items: center;
+}
+.set-labels {
+  font-size: 11px;
+  color: #69745d;
+  padding-bottom: 8px;
+}
+.set-row {
+  padding: 9px 0;
+  border-bottom: 1px solid #e3e6db;
+}
+.set-row input {
+  min-width: 0;
+  width: 100%;
+  padding: 10px 8px;
+  min-height: 44px;
+  background: #fff;
+  border: 1px solid #d8dccf;
+  border-radius: 8px;
+  color: #34452e;
+}
+.set-row .primary,
+.set-row .outline {
+  padding: 10px;
+  font-size: 12px;
+  min-width: 65px;
+}
+.set-row.logged {
+  color: #54744c;
+}
+.effort-field,
+.preference-field {
+  border: 0;
+  padding: 0;
+  margin: 18px 0;
+  min-width: 0;
+}
+.effort-field legend,
+.preference-field legend {
+  font-size: 12px;
+  color: #536247;
+  margin-bottom: 10px;
+}
+.effort-field button {
+  padding: 10px;
+  min-height: 44px;
+  margin: 0 5px 6px 0;
+  border: 1px solid #d8dccf;
+  border-radius: 8px;
+  color: #526348;
+  background: #fff;
+}
+.effort-field button[aria-pressed='true'] {
+  border-color: #a56340;
+  background: #f5e6db;
+  color: #773e23;
+}
+.skip-exercise {
+  margin-top: 18px;
+}
+.form-fields .preference-field label,
+.form-fields .exclusion-list label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+}
+.form-fields .preference-field input,
+.form-fields .exclusion-list input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #a96b49;
+}
+.weekday-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.exercise-exclusions summary,
+.schedule-editor summary {
+  cursor: pointer;
+  padding: 14px 0;
+  font-size: 13px;
+  color: #526348;
+}
+.exclusion-list {
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px;
+  background: #f6f6ef;
+  border-radius: 9px;
+}
+.setup-error {
+  color: #9a382b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.schedule-editor {
+  border-top: 1px solid #e1e4d8;
+  margin-top: 16px;
+}
+.schedule-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.schedule-list > div {
+  display: grid;
+  grid-template-columns: 1fr minmax(130px, 190px);
+  gap: 6px 14px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f6f5ee;
+}
+.schedule-list .text-button {
+  justify-self: start;
+  text-align: left;
+}
+.schedule-list small {
+  grid-column: 1;
+  color: #7d6b54;
+}
+.schedule-list label {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+.performance-history {
+  margin-bottom: 24px;
+}
+.performance-history > p {
+  font-size: 13px;
+  color: #68735e;
+  line-height: 1.7;
+  margin: 16px 0;
+}
+.performance-table {
+  overflow-x: auto;
+  margin-top: 18px;
+}
+.performance-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.performance-table th,
+.performance-table td {
+  padding: 13px 10px;
+  border-bottom: 1px solid #e1e4d8;
+  line-height: 1.6;
+}
+.session-record {
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 50%;
+}
+.session-record summary {
+  cursor: pointer;
+}
+.session-record p {
+  margin-top: 10px;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+@media (max-width: 600px) {
+  .session-tools {
+    grid-template-columns: 1fr;
+  }
+  .schedule-list > div {
+    grid-template-columns: 1fr;
+  }
+  .schedule-list label {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .activity-row {
+    flex-wrap: wrap;
+  }
+  .session-record {
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+}

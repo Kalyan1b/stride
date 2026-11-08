@@ -1,3 +1,6 @@
+import PerformanceHistory from './PerformanceHistory';
+import SessionSchedule from './SessionSchedule';
+import { performanceSummary } from './training';
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
@@ -27,15 +30,21 @@ import { publicAsset } from './assets';
 import ExercisePreview from './ExercisePreview';
 import ProfileWizard from './ProfileWizard';
 import WorkoutSession from './WorkoutSession';
-import { buildPlan, weekdays, localDate, weekStart, saveStored } from './workoutPlan';
+import { buildPlan, weekdays, localDate, weekStart, saveStored, readStored } from './workoutPlan';
 import {
   STORAGE_KEY,
+  PROGRAM_BACKUP_KEY,
   loadAppState,
   updateProfile,
   updateDraft,
   completeWorkout,
   completedThisWeek,
   emptyDraft,
+  resolvedWorkout,
+  swapExercise,
+  scheduledDate,
+  moveSession,
+  resumeSchedule,
 } from './appState';
 const navigation = [
   { name: 'Home', Icon: House },
@@ -44,6 +53,7 @@ const navigation = [
 ];
 export default function App() {
   const [boot] = useState(loadAppState);
+  const [previousProgram] = useState(() => readStored(PROGRAM_BACKUP_KEY, null));
   const [state, setState] = useState(boot.state);
   const { profile, personalized, history, active } = state;
   const [tab, setTab] = useState('Home'),
@@ -54,17 +64,16 @@ export default function App() {
     [celebration, setCelebration] = useState(null),
     [storageAvailable, setStorageAvailable] = useState(true);
   const plan = buildPlan(profile),
-    workout = plan[active] || plan[0];
+    workout = resolvedWorkout(state, active);
   const draft = state.drafts[active] || emptyDraft(),
     done = draft.done;
   const hasProgress = draft.started || done.length > 0;
   useEffect(() => {
     setStorageAvailable(saveStored(STORAGE_KEY, state));
   }, [state]);
-  const today = localDate(),
-    startOfWeek = weekStart(),
-    weeklyHistory = history.filter((record) => record.date >= startOfWeek && record.date <= today);
-  const weeklyCount = weeklyHistory.length,
+  const startOfWeek = weekStart();
+  const weeklyCount = plan.filter((item) => completedThisWeek(state, item.id)).length,
+    totalCompleted = history.filter((record) => record.status !== 'partial').length,
     percent = Math.min(100, (weeklyCount / plan.length) * 100);
   const bmi = Number(profile.weight) / (Number(profile.height) / 100) ** 2;
   const category =
@@ -92,10 +101,16 @@ export default function App() {
     setState((prev) => updateDraft(prev, prev.active, patch));
   }
   function finish() {
-    if (done.length !== workout.exercises.length) return;
+    if (
+      !workout.exercises.every((item, index) => done.includes(index) || draft.skipped?.[item.name])
+    )
+      return;
     setState((prev) => completeWorkout(prev));
     setSession(false);
-    setCelebration(workout.title);
+    if (Object.keys(draft.skipped || {}).length) {
+      setNotice('Partial session saved. Skipped exercises are recorded separately.');
+      setTab('Progress');
+    } else setCelebration(workout.title);
   }
   function selectWorkout(index) {
     setState((prev) => ({ ...prev, active: index }));
@@ -390,7 +405,19 @@ export default function App() {
                 </div>
                 <div className="week-strip">
                   {weekdays.map((day, dayIndex) => {
-                    const index = plan.findIndex((item) => item.day === dayIndex),
+                    const index = plan.findIndex((item) => {
+                        const date = scheduledDate(state, item.id);
+                        return (
+                          date >= startOfWeek &&
+                          date <=
+                            (() => {
+                              const end = new Date(`${startOfWeek}T12:00:00`);
+                              end.setDate(end.getDate() + 6);
+                              return localDate(end);
+                            })() &&
+                          (new Date(`${date}T12:00:00`).getDay() + 6) % 7 === dayIndex
+                        );
+                      }),
                       item = plan[index];
                     return item ? (
                       <button
@@ -427,6 +454,18 @@ export default function App() {
                     );
                   })}
                 </div>
+                <SessionSchedule
+                  state={state}
+                  plan={plan}
+                  onSelect={selectWorkout}
+                  onResume={() => setState((prev) => resumeSchedule(prev))}
+                  onMove={(id, date) => {
+                    const next = moveSession(state, id, date);
+                    if (next === state) return false;
+                    setState(next);
+                    return true;
+                  }}
+                />
                 <div className="week-tip">
                   <Leaf size={14} />
                   <span>
@@ -440,7 +479,7 @@ export default function App() {
                   <div>
                     <div className="workout-day-label">
                       <span className="orange-dot" />
-                      {weekdays[workout.day].toUpperCase()} / SESSION {active + 1}
+                      {scheduledDate(state, active)} / SESSION {active + 1}
                     </div>
                     <h2 id="selected-workout-title">{workout.title}</h2>
                     <div className="workout-meta">
@@ -455,11 +494,22 @@ export default function App() {
                       <span className="level-tag">{profile.experience}</span>
                     </div>
                   </div>
-                  <button className="primary" onClick={startWorkout}>
+                  <button
+                    className="primary"
+                    onClick={startWorkout}
+                    disabled={!workout.exercises.length}
+                  >
                     {hasProgress ? 'Resume session' : 'Start session'}
                     <Play size={15} fill="currentColor" />
                   </button>
                 </div>
+                <p className="program-reason">
+                  {workout.reason}{' '}
+                  {workout.adapted &&
+                    'Some movements were substituted or omitted to match your preferences. Review coverage and available equipment.'}{' '}
+                  Estimates include a 5-minute warm-up and prescribed rests; your actual pace may
+                  differ.
+                </p>
                 <div className="warmup-note">
                   <Flame size={17} />
                   <span>
@@ -468,6 +518,17 @@ export default function App() {
                     increase gradually when all sets reach the top of the rep range.
                   </span>
                 </div>
+                {!workout.exercises.length && (
+                  <div className="empty-state">
+                    <h3>No suitable movements remain in this session.</h3>
+                    <p>
+                      Review your movement exclusions or available equipment to build a usable plan.
+                    </p>
+                    <button className="outline" onClick={openSetup}>
+                      Review preferences
+                    </button>
+                  </div>
+                )}
                 <div className="exercise-list">
                   {workout.exercises.map((item, i) => (
                     <div className="exercise-row" key={item.name}>
@@ -537,6 +598,10 @@ export default function App() {
                   <small>{category}</small>
                 </div>
                 <p className="bmi-explanation">
+                  Your exercises are chosen from your goal, experience, equipment, time, and
+                  movement preferences. BMI does not select your exercises.{' '}
+                </p>
+                <p className="bmi-explanation">
                   BMI doesn’t measure muscle or fitness. Use it as one reference, alongside how you
                   feel.
                 </p>
@@ -575,7 +640,7 @@ export default function App() {
               <section className="progress-feature">
                 <span className="eyebrow">EVERY SESSION COUNTS</span>
                 <Trophy size={33} />
-                <strong>{history.length.toString().padStart(2, '0')}</strong>
+                <strong>{totalCompleted.toString().padStart(2, '0')}</strong>
                 <h2>workouts completed</h2>
                 <p>
                   {history.length
@@ -604,7 +669,12 @@ export default function App() {
                       <span>
                         {weeklyDone(index) ? <Check size={19} /> : <Dumbbell size={19} />}
                       </span>
-                      <b>{weekdays[item.day].slice(0, 3)}</b>
+                      <b>
+                        {new Date(`${scheduledDate(state, item.id)}T12:00:00`).toLocaleDateString(
+                          undefined,
+                          { weekday: 'short' },
+                        )}
+                      </b>
                     </div>
                   ))}
                 </div>
@@ -613,6 +683,33 @@ export default function App() {
                 </p>
               </section>
             </div>
+            {previousProgram && (
+              <div className="training-advice">
+                <b>Your previous program is backed up on this device.</b>
+                <p>
+                  Older exercise checkmarks did not include individual set results. Your history is
+                  kept; the new program starts with fresh set logs.
+                </p>
+                <button
+                  className="outline"
+                  onClick={() => {
+                    const url = URL.createObjectURL(
+                      new Blob([JSON.stringify(previousProgram, null, 2)], {
+                        type: 'application/json',
+                      }),
+                    );
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'stride-previous-program.json';
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  }}
+                >
+                  Download previous program backup
+                </button>
+              </div>
+            )}
+            <PerformanceHistory history={history} />
             <section className="activity-card">
               <div className="section-title">
                 <div>
@@ -638,8 +735,24 @@ export default function App() {
                           })}
                         </small>
                       </div>
+                      {item.performance?.length > 0 && (
+                        <details className="session-record">
+                          <summary>View sets</summary>
+                          {item.performance.map((entry) => (
+                            <p key={entry.name}>
+                              <b>{entry.name}</b>:{' '}
+                              {entry.skipped
+                                ? `Skipped — ${entry.skipped}${entry.sets.length ? ` · Logged before stopping: ${performanceSummary(entry)}` : ''}`
+                                : performanceSummary(entry)}{' '}
+                              {entry.effort &&
+                                `(${entry.effort === 'right' ? 'about right' : entry.effort})`}
+                            </p>
+                          ))}
+                        </details>
+                      )}
                       <span>
-                        Completed <Check size={13} />
+                        {item.status === 'partial' ? 'Partial session' : 'Completed'}{' '}
+                        <Check size={13} />
                       </span>
                     </div>
                   ))}
@@ -709,6 +822,9 @@ export default function App() {
           key={`${state.planId}-${active}`}
           workout={workout}
           draft={draft}
+          profile={profile}
+          history={history}
+          onSwap={(index, name) => setState((prev) => swapExercise(prev, prev.active, index, name))}
           onUpdate={updateSession}
           onGuide={setGuide}
           onFinish={finish}

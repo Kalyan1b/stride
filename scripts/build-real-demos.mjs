@@ -1,118 +1,95 @@
+// Rebuild shipped demonstrations from the attributed source catalog.
+// Usage: node scripts/build-real-demos.mjs [exercise-slug]
 import ffmpeg from '@ffmpeg-installer/ffmpeg';
 import { spawnSync } from 'node:child_process';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import sharp from 'sharp';
 import gifenc from 'gifenc';
 const { GIFEncoder, quantize, applyPalette } = gifenc;
-const cache = '/private/tmp/form-real-demos';
-const config = {
-  'reverse-lunge': { start: 10, duration: 8, endOffset: 2, view: 'Bodyweight · side view' },
-  'bodyweight-squat': { start: 13, duration: 8, view: 'Side view' },
-  'dumbbell-bench-press': { start: 0, duration: 7, view: 'Side view' },
-  'dumbbell-shoulder-press': { start: 0, duration: 8, view: 'Seated variation' },
-  'seated-cable-row': { start: 0, duration: 8, view: 'Seated cable machine' },
-  'goblet-squat': { start: 17, duration: 8, view: 'Kettlebell variation' },
-  'glute-bridge': { start: 6, duration: 8, view: 'Side view' },
-  'push-up': { start: 30, duration: 8, view: 'Side view' },
-  plank: { start: 45, duration: 8, view: 'Forearm plank' },
-  'step-up': { start: 32, duration: 9, view: 'Bodyweight step-up' },
-};
-const records = JSON.parse(await readFile(`${cache}/sources.json`));
-for (const [slug, cfg] of Object.entries(config)) {
-  const filters =
-    'fps=12,scale=640:-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer';
-  const result = spawnSync(
-    ffmpeg.path,
-    [
-      '-y',
+const root = new URL('../', import.meta.url);
+const cache = join(tmpdir(), 'stride-demo-sources');
+await mkdir(cache, { recursive: true });
+const records = JSON.parse(await readFile(new URL('src/realExerciseMedia.json', root)));
+const selected = process.argv[2];
+if (selected && !Object.hasOwn(records, selected))
+  throw Error(`Unknown exercise slug: ${selected}`);
+async function download(url, name) {
+  const path = join(cache, name);
+  try {
+    await access(path);
+  } catch {
+    const response = await fetch(url);
+    if (!response.ok) throw Error(`Source download failed: ${response.status} ${url}`);
+    await writeFile(path, Buffer.from(await response.arrayBuffer()));
+  }
+  return path;
+}
+function run(args) {
+  const result = spawnSync(ffmpeg.path, ['-y', ...args], { encoding: 'utf8' });
+  if (result.status !== 0) throw Error(result.stderr);
+}
+for (const [slug, record] of Object.entries(records)) {
+  if (selected && slug !== selected) continue;
+  const output = (suffix) => new URL(`public/exercises/${slug}${suffix}`, root).pathname;
+  if (record.kind === 'footage') {
+    const source = await download(record.video, `${slug}.source`),
+      width = record.width || 640,
+      fps = record.fps || 12;
+    run([
       '-ss',
-      String(cfg.start),
+      String(record.start),
       '-t',
-      String(cfg.duration),
+      String(record.duration),
       '-i',
-      `${cache}/${slug}.mp4`,
+      source,
       '-filter_complex',
-      filters,
+      `fps=${fps},scale=${width}:-2:flags=lanczos,setsar=1,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`,
       '-loop',
       '0',
-      `public/exercises/${slug}.gif`,
-    ],
-    { encoding: 'utf8' },
-  );
-  if (result.status !== 0) throw Error(result.stderr);
-  for (const [suffix, offset] of [
-    ['start', 0],
-    ['end', cfg.endOffset ?? cfg.duration / 2],
-  ]) {
-    const r = spawnSync(
-      ffmpeg.path,
-      [
-        '-y',
+      output('.gif'),
+    ]);
+    for (const [suffix, offset] of [
+      ['start', 0],
+      ['end', record.endOffset ?? record.duration / 2],
+    ])
+      run([
         '-ss',
-        String(cfg.start + offset),
+        String(record.start + offset),
         '-i',
-        `${cache}/${slug}.mp4`,
+        source,
         '-vf',
-        'scale=640:-2',
+        `scale=${width}:-2,setsar=1`,
         '-frames:v',
         '1',
-        `public/exercises/${slug}-${suffix}.jpg`,
-      ],
-      { encoding: 'utf8' },
-    );
-    if (r.status !== 0) throw Error(r.stderr);
+        output(`-${suffix}.jpg`),
+      ]);
+  } else {
+    const encoder = GIFEncoder();
+    for (let i = 0; i < record.images.length; i++) {
+      const url =
+        record.imageUrls?.[i] ||
+        `https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${record.images[i]}`;
+      const source = await download(url, `${slug}-${i}.jpg`);
+      const img = sharp(source)
+        .resize(640, 430, { fit: 'contain', background: '#fff' })
+        .flatten({ background: '#fff' });
+      if (i < 2)
+        await img
+          .clone()
+          .jpeg()
+          .toFile(output(`-${i ? 'end' : 'start'}.jpg`));
+      const rgba = await img.ensureAlpha().raw().toBuffer(),
+        palette = quantize(rgba, 128);
+      encoder.writeFrame(applyPalette(rgba, palette), 640, 430, {
+        palette,
+        delay: 1600,
+        repeat: 0,
+      });
+    }
+    encoder.finish();
+    await writeFile(output('.gif'), encoder.bytes());
   }
-  Object.assign(records[slug], {
-    kind: 'footage',
-    view: cfg.view,
-    changes: `Trimmed to ${cfg.duration} seconds, resized to 640px, converted to a silent looping GIF.`,
-    ...cfg,
-  });
-  console.log('Built', slug);
+  console.log(`Built ${slug}`);
 }
-const photos = {
-  'dead-bug': 'Dead_Bug',
-  'dumbbell-bent-over-row': 'Bent_Over_Two-Dumbbell_Row',
-  'gentle-full-body-stretch': 'Overhead_Stretch',
-  'brisk-walk-or-cycle': 'Walking_Treadmill',
-};
-const dataset = JSON.parse(await readFile('/private/tmp/form-free-exercises.json'));
-for (const [slug, id] of Object.entries(photos)) {
-  const item = dataset.find((x) => x.id === id);
-  const encoder = GIFEncoder();
-  for (let i = 0; i < 2; i++) {
-    const source = `${cache}/${slug}-${i}.jpg`;
-    const img = sharp(source)
-      .resize(640, 430, { fit: 'contain', background: '#fff' })
-      .flatten({ background: '#fff' });
-    await img
-      .clone()
-      .jpeg()
-      .toFile(`public/exercises/${slug}-${i ? 'end' : 'start'}.jpg`);
-    const rgba = await img.ensureAlpha().raw().toBuffer();
-    const palette = quantize(rgba, 128);
-    encoder.writeFrame(applyPalette(rgba, palette), 640, 430, { palette, delay: 1600, repeat: 0 });
-  }
-  encoder.finish();
-  await writeFile(`public/exercises/${slug}.gif`, encoder.bytes());
-  records[slug] = {
-    kind: 'poses',
-    view:
-      slug === 'dead-bug'
-        ? 'Leg-only variation'
-        : slug === 'brisk-walk-or-cycle'
-          ? 'Treadmill walking example'
-          : slug === 'gentle-full-body-stretch'
-            ? 'Overhead stretch example'
-            : 'Start and finish positions',
-    source: `https://github.com/yuhonas/free-exercise-db/tree/main/exercises/${id}`,
-    credit: 'Free Exercise DB contributors',
-    license: 'Public domain / Unlicense',
-    licenseUrl: 'https://unlicense.org/',
-    changes: 'Two original photos resized and combined into a looping pose sequence.',
-    images: item.images,
-  };
-  console.log('Built photo sequence', slug);
-}
-await writeFile('src/realExerciseMedia.json', JSON.stringify(records, null, 2) + '\n');
-await writeFile('public/exercises/ATTRIBUTION.json', JSON.stringify(records, null, 2) + '\n');
