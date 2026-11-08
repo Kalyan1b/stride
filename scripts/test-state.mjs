@@ -1,3 +1,4 @@
+import { toCentimeters, toFeetAndInches, formatHeight } from '../src/height.js';
 import assert from 'node:assert/strict';
 import {
   buildPlan,
@@ -210,3 +211,25 @@ assert.ok(twiceWeekly.every((workout) => workout.title.startsWith('Full-body')))
 console.log(
   'PASS: distinct stable sessions, leg/shoulder coverage, and two-day full-body training.',
 );
+
+assert.equal(toCentimeters(5, 9), 175.26);
+assert.equal(toCentimeters(6, 0), 182.88);
+assert.equal(toCentimeters('', 9), '');
+assert.equal(toCentimeters(5, ''), '');
+assert.deepEqual(toFeetAndInches(182.88), { feet: 6, inches: 0 });
+assert.deepEqual(toFeetAndInches(175.26), { feet: 5, inches: 9 });
+assert.equal(formatHeight({ height: 175.26, heightUnit: 'ft' }), '5 ft 9 in');
+assert.equal(normalizeProfile({ ...defaultProfile, heightUnit: 'invalid' }).heightUnit, 'cm');
+const imperialProfile = updateProfile(state, {
+  ...state.profile,
+  height: 175.26,
+  heightUnit: 'ft',
+});
+assert.equal(
+  imperialProfile.planId,
+  state.planId,
+  'Changing height units must preserve the current plan',
+);
+assert.equal(imperialProfile.profile.height, 175.26);
+assert.equal(imperialProfile.profile.heightUnit, 'ft');
+console.log('PASS: metric/imperial conversion, stored units, and plan preservation.');

@@ -3921,3 +3921,51 @@ dialog::backdrop {
 .equipment-extras .form-hint {
   margin-top: 4px;
 }
+
+.height-field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.height-field legend {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6f7764;
+  margin-bottom: 9px;
+}
+.height-unit-options {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f2f1e9;
+  margin-bottom: 12px;
+}
+.height-unit-options button {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #626a58;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.height-unit-options button[aria-pressed='true'] {
+  background: #fff;
+  color: #8b4828;
+  box-shadow: 0 1px 4px #00000012;
+}
+.height-parts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.height-parts input {
+  min-width: 0;
+}
+.height-field .form-hint {
+  margin-top: 8px;
+}

@@ -1,6 +1,7 @@
 export const defaultProfile = {
   name: 'Alex',
   height: 175,
+  heightUnit: 'cm',
   weight: 75,
   goal: 'Build muscle',
   experience: 'Beginner',
@@ -210,6 +211,7 @@ export function normalizeProfile(value) {
     typeof input.name === 'string' && input.name.trim()
       ? input.name.trim().slice(0, 30)
       : defaultProfile.name;
+  profile.heightUnit = input.heightUnit === 'ft' ? 'ft' : 'cm';
   profile.height = numberInRange(input.height, 100, 250, defaultProfile.height);
   profile.weight = numberInRange(input.weight, 30, 350, defaultProfile.weight);
   for (const [field, options] of Object.entries(choices)) {

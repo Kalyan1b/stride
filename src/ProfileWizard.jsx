@@ -1,3 +1,4 @@
+import HeightInput from './HeightInput';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
@@ -121,19 +122,12 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
                 />
               </label>
               <div className="form-row">
-                <label>
-                  Height <span className="input-unit">centimeters</span>
-                  <input
-                    inputMode="decimal"
-                    type="number"
-                    min="100"
-                    max="250"
-                    step="0.1"
-                    required
-                    value={draft.height}
-                    onChange={(e) => update('height', e.target.value)}
-                  />
-                </label>
+                <HeightInput
+                  height={draft.height}
+                  unit={draft.heightUnit || 'cm'}
+                  onChange={(height) => update('height', height)}
+                  onUnitChange={(unit) => update('heightUnit', unit)}
+                />
                 <label>
                   Weight <span className="input-unit">kilograms</span>
                   <input

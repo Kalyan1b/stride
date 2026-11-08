@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import ExerciseGuide from './ExerciseGuide';
+import { formatHeight } from './height';
 import { publicAsset } from './assets';
 import ExercisePreview from './ExercisePreview';
 import ProfileWizard from './ProfileWizard';
@@ -516,10 +517,7 @@ export default function App() {
                 <div className="body-values">
                   <div>
                     <span>Height</span>
-                    <b>
-                      {profile.height}
-                      <small> cm</small>
-                    </b>
+                    <b>{formatHeight(profile)}</b>
                   </div>
                   <div>
                     <span>Weight</span>

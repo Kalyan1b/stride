@@ -143,6 +143,41 @@ try {
     inputSetter.call(nameInput, 'Sam');
     nameInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
+  const setInput = async (input, value) => {
+    await act(async () => {
+      inputSetter.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+  await click(button('ft / in'));
+  const parts = () => document.querySelectorAll('.height-parts input');
+  await setInput(parts()[0], '5');
+  await setInput(parts()[1], '12');
+  assert.equal(
+    document.querySelector('.setup-dialog form').checkValidity(),
+    false,
+    'Inches must be below 12',
+  );
+  await setInput(parts()[1], '9');
+  await setInput(parts()[0], '2');
+  assert.equal(
+    document.querySelector('.setup-dialog form').checkValidity(),
+    false,
+    'Combined height must meet the supported range',
+  );
+  await setInput(parts()[0], '5');
+  await setInput(parts()[1], '');
+  assert.equal(
+    document.querySelector('.setup-dialog form').checkValidity(),
+    false,
+    'Both imperial fields are required',
+  );
+  await setInput(parts()[1], '9');
+  await click(button('cm', document.querySelector('.height-unit-options')));
+  assert.equal(document.querySelector('.height-field input').value, '175.26');
+  await click(button('ft / in'));
+  assert.equal(parts()[0].value, '5');
+  assert.equal(parts()[1].value, '9');
   await submit();
   const equipmentSelect = document.querySelectorAll('.setup-dialog select')[1];
   await act(async () => {
@@ -155,6 +190,15 @@ try {
   assert.ok(document.querySelector('h1').textContent.includes('Sam'));
   assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).profile.equipment, 'Bodyweight only');
   assert.equal(document.querySelectorAll('.workout-day').length, 2);
+  const savedHeight = JSON.parse(localStorage.getItem(STORAGE_KEY)).profile;
+  assert.equal(savedHeight.height, 175.26);
+  assert.equal(savedHeight.heightUnit, 'ft');
+  assert.ok(document.querySelector('.body-values').textContent.includes('5 ft 9 in'));
+  assert.ok(
+    document
+      .querySelector('.bmi-result')
+      .textContent.includes((savedHeight.weight / 1.7526 ** 2).toFixed(1)),
+  );
   assert.ok(!document.querySelector('.welcome-banner'));
   await click(button('Watch demo'));
   assert.ok(document.querySelector('.guide-dialog[open]'));
@@ -242,6 +286,12 @@ try {
   await click(document.querySelector('.profile-button'));
   await click(document.querySelector('input[value="Build muscle"]'));
   await submit();
+  assert.equal(parts()[0].value, '5', 'Saved feet must be restored when reopening settings');
+  assert.equal(parts()[1].value, '9');
+  assert.equal(
+    document.querySelector('.height-unit-options button[aria-pressed="true"]').textContent.trim(),
+    'ft / in',
+  );
   await submit();
   await submit();
   assert.equal(document.querySelectorAll('.workout-day.completed').length, 0);
