@@ -10,6 +10,7 @@ import {
   normalizeHistory,
 } from '../src/workoutPlan.js';
 import { exerciseGuides } from '../src/exerciseData.js';
+import { STORAGE_KEY } from '../src/appState.js';
 
 // Plan coverage: each configuration must stay within equipment and media availability.
 let combinations = 0;
@@ -147,7 +148,7 @@ try {
   await submit();
   assert.equal(document.querySelector('.setup-dialog'), null);
   assert.ok(document.querySelector('h1').textContent.includes('Sam'));
-  assert.equal(JSON.parse(localStorage.getItem('form-profile')).equipment, 'Bodyweight only');
+  assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).profile.equipment, 'Bodyweight only');
   assert.equal(document.querySelectorAll('.workout-day').length, 2);
   assert.ok(!document.querySelector('.welcome-banner'));
   await click(button('Watch demo'));
@@ -166,18 +167,41 @@ try {
   await click(document.querySelector('[aria-label="Pause rest timer"]'));
   assert.ok(document.querySelector('[aria-label="Resume rest timer"]'));
   await click(document.querySelector('[aria-label="Close workout"]'));
+  // A full app remount models refresh: recover the exercise, checkmarks, and paused timer.
+  await act(async () => root.unmount());
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(React.createElement(App)));
   await click(button('Resume session'));
+  assert.ok(
+    document.querySelector('[aria-label="Resume rest timer"]'),
+    'Paused rest must survive refresh',
+  );
+  assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).drafts[0].done.length, 1);
+
   assert.equal(
     document.querySelector('.session-heading-row h2').textContent,
     'Push-up',
     'Closing and reopening should preserve checked exercises',
   );
+  await click(document.querySelector('[aria-label="Resume rest timer"]'));
+  const actualNow = Date.now;
+  try {
+    Date.now = () => actualNow() + 120000;
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    assert.equal(
+      document.querySelector('.rest-timer'),
+      null,
+      'Returning after a background delay must expire the rest',
+    );
+  } finally {
+    Date.now = actualNow;
+  }
   await click(button('Complete & next'));
   await click(button('Complete & next'));
   await click(button('Mark exercise complete'));
   await click(button('Finish workout'));
   assert.ok(document.querySelector('.celebration-dialog[open]'));
-  assert.equal(JSON.parse(localStorage.getItem('form-completed')).length, 1);
+  assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).history.length, 1);
   await click(button('See my progress', document.querySelector('.celebration-dialog')));
   assert.equal(document.querySelector('.activity-row b').textContent, 'Full-body strength');
   assert.ok(document.querySelector('.progress-feature strong').textContent.includes('1'));
@@ -195,8 +219,70 @@ try {
     1,
     'Completed workouts should survive a reload',
   );
+  // Completing the same workout twice on the same date must keep both sessions.
+  await click(button('Home', document.querySelector('.sidebar nav')));
+  await click(button('Start session'));
+  await click(button('I’m warmed up. Let’s go'));
+  await click(button('Complete & next'));
+  await click(button('Complete & next'));
+  await click(button('Complete & next'));
+  await click(button('Mark exercise complete'));
+  await click(button('Finish workout'));
+  await click(button('See my progress', document.querySelector('.celebration-dialog')));
+  const sessions = JSON.parse(localStorage.getItem(STORAGE_KEY)).history;
+  assert.equal(sessions.length, 2);
+  assert.notEqual(sessions[0].id, sessions[1].id);
+  assert.equal(document.querySelectorAll('.activity-row').length, 2);
+  // A new goal must not inherit the old plan's completion checkmarks.
+  await click(document.querySelector('.profile-button'));
+  await click(document.querySelector('input[value="Build muscle"]'));
+  await submit();
+  await submit();
+  await submit();
+  assert.equal(document.querySelectorAll('.workout-day.completed').length, 0);
+  assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).history.length, 2);
+  // Equipment controls must actually change the exercises assigned to the user.
+  await click(document.querySelector('.profile-button'));
+  await submit();
+  await submit();
+  const extraEquipment = document.querySelectorAll('.setup-dialog select')[1];
+  await act(async () => {
+    extraEquipment.value = 'Dumbbells';
+    extraEquipment.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  const bench = document.querySelector('.equipment-extras input[type="checkbox"]');
+  assert.equal(bench.checked, false);
+  await click(bench);
+  await submit();
+  assert.ok(document.querySelector('.exercise-list').textContent.includes('Dumbbell bench press'));
+  assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).profile.hasBench, true);
+  // Corrupt saved profile fields must never crash the app or produce an invalid BMI.
+  await act(async () => root.unmount());
+  root = null;
+  const broken = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  broken.profile = { ...broken.profile, name: null, height: 0, weight: 'invalid', days: 99 };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(broken));
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(React.createElement(App)));
+  assert.ok(document.querySelector('.welcome-banner'));
+  assert.ok(!document.querySelector('main').textContent.includes('NaN'));
+  assert.equal(JSON.parse(localStorage.getItem(STORAGE_KEY)).history.length, 2);
+  // Storage failure must be visible, not mistaken for a saved workout.
+  await act(async () => root.unmount());
+  root = null;
+  const realStorage = globalThis.localStorage;
+  globalThis.localStorage = {
+    getItem: (key) => realStorage.getItem(key),
+    setItem: () => {
+      throw new Error('Storage disabled');
+    },
+  };
+  root = createRoot(document.getElementById('root'));
+  await act(async () => root.render(React.createElement(App)));
+  assert.ok(document.querySelector('.storage-warning[role="alert"]'));
+  globalThis.localStorage = realStorage;
   console.log(
-    'PASS: setup validation, personalization, plan updates, exercise media, reduced motion, workout checkmarks, rest controls, resume, completion, navigation, and persisted progress.',
+    'PASS: setup, demonstrations, refresh recovery, paused rest recovery, repeated sessions, plan-change history, corrupt-data recovery, and visible storage failures.',
   );
 } finally {
   if (root) await act(async () => root.unmount());

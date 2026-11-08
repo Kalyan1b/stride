@@ -26,39 +26,40 @@ import { publicAsset } from './assets';
 import ExercisePreview from './ExercisePreview';
 import ProfileWizard from './ProfileWizard';
 import WorkoutSession from './WorkoutSession';
+import { buildPlan, weekdays, localDate, weekStart, saveStored } from './workoutPlan';
 import {
-  defaultProfile,
-  buildPlan,
-  weekdays,
-  localDate,
-  weekStart,
-  readStored,
-  saveStored,
-  normalizeHistory,
-} from './workoutPlan';
+  STORAGE_KEY,
+  loadAppState,
+  updateProfile,
+  updateDraft,
+  completeWorkout,
+  completedThisWeek,
+  emptyDraft,
+} from './appState';
 const navigation = [
   { name: 'Home', Icon: House },
   { name: 'My plan', Icon: CalendarDays },
   { name: 'Progress', Icon: ChartNoAxesCombined },
 ];
 export default function App() {
-  const [profile, setProfile] = useState(() => ({
-    ...defaultProfile,
-    ...readStored('form-profile', {}),
-  }));
-  const [personalized, setPersonalized] = useState(() => Boolean(readStored('form-profile', null)));
-  const [history, setHistory] = useState(() => normalizeHistory(readStored('form-completed', [])));
+  const [boot] = useState(loadAppState);
+  const [state, setState] = useState(boot.state);
+  const { profile, personalized, history, active } = state;
   const [tab, setTab] = useState('Home'),
-    [active, setActive] = useState(0),
     [editing, setEditing] = useState(false),
     [guide, setGuide] = useState(null),
     [session, setSession] = useState(false),
-    [progress, setProgress] = useState({}),
-    [notice, setNotice] = useState(''),
-    [celebration, setCelebration] = useState(null);
+    [notice, setNotice] = useState(boot.notice),
+    [celebration, setCelebration] = useState(null),
+    [storageAvailable, setStorageAvailable] = useState(true);
   const plan = buildPlan(profile),
-    workout = plan[active] || plan[0],
-    done = progress[active] || [];
+    workout = plan[active] || plan[0];
+  const draft = state.drafts[active] || emptyDraft(),
+    done = draft.done;
+  const hasProgress = draft.started || done.length > 0;
+  useEffect(() => {
+    setStorageAvailable(saveStored(STORAGE_KEY, state));
+  }, [state]);
   const today = localDate(),
     startOfWeek = weekStart(),
     weeklyHistory = history.filter((record) => record.date >= startOfWeek && record.date <= today);
@@ -81,47 +82,26 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function saveProfile(next) {
-    const saved = saveStored('form-profile', next);
-    setProfile(next);
-    setPersonalized(true);
-    setActive(0);
-    setProgress({});
+    setState((prev) => updateProfile(prev, next));
     setEditing(false);
     setTab('Home');
-    setNotice(
-      saved
-        ? 'Your plan is ready. Make it a good first session.'
-        : 'Your plan is ready for this visit. Browser storage is unavailable.',
-    );
+    setNotice('Your plan is ready. Make it a good session.');
   }
-  function toggleExercise(index) {
-    setProgress((prev) => ({
-      ...prev,
-      [active]: done.includes(index) ? done.filter((n) => n !== index) : [...done, index],
-    }));
+  function updateSession(patch) {
+    setState((prev) => updateDraft(prev, prev.active, patch));
   }
   function finish() {
-    const id = `${today}-${active}`;
-    const next = [
-      ...history.filter((record) => record.id !== id),
-      { id, date: today, workoutId: active, title: workout.title },
-    ];
-    const saved = saveStored('form-completed', next);
-    setHistory(next);
+    if (done.length !== workout.exercises.length) return;
+    setState((prev) => completeWorkout(prev));
     setSession(false);
-    setProgress((prev) => ({ ...prev, [active]: [] }));
     setCelebration(workout.title);
-    if (!saved)
-      setNotice(
-        'Workout completed. Browser storage is unavailable, so this session won’t be saved after you leave.',
-      );
   }
   function selectWorkout(index) {
-    setActive(index);
+    setState((prev) => ({ ...prev, active: index }));
   }
   const openSetup = () => setEditing(true);
   const startWorkout = () => setSession(true);
-  const weeklyDone = (index) => weeklyHistory.some((record) => record.workoutId === index);
+  const weeklyDone = (index) => completedThisWeek(state, index);
   return (
     <div className="app">
       <a className="skip-link" href="#main-content">
@@ -253,6 +233,12 @@ export default function App() {
             </button>
           </div>
         )}
+        {!storageAvailable && (
+          <div className="storage-warning" role="alert">
+            Your browser couldn’t save these changes. They are available for this visit only; keep
+            this page open to avoid losing your workout.
+          </div>
+        )}
         {tab === 'Home' && (
           <>
             <div className="dashboard-top">
@@ -274,7 +260,7 @@ export default function App() {
                   </p>
                   <button className="hero-button" onClick={personalized ? startWorkout : openSetup}>
                     {personalized
-                      ? done.length
+                      ? hasProgress
                         ? 'Resume workout'
                         : 'Let’s get moving'
                       : 'Find my plan'}
@@ -373,7 +359,13 @@ export default function App() {
                 <span>
                   <small>YOUR SETUP</small>
                   <b>
-                    {profile.equipment === 'Bodyweight only' ? 'No equipment' : profile.equipment}
+                    {profile.equipment === 'Bodyweight only'
+                      ? profile.hasStep
+                        ? 'Bodyweight + step'
+                        : 'No equipment'
+                      : profile.hasBench && profile.equipment === 'Dumbbells'
+                        ? 'Dumbbells + bench'
+                        : profile.equipment}
                   </b>
                 </span>
               </div>
@@ -460,7 +452,7 @@ export default function App() {
                     </div>
                   </div>
                   <button className="primary" onClick={startWorkout}>
-                    {done.length ? 'Resume session' : 'Start session'}
+                    {hasProgress ? 'Resume session' : 'Start session'}
                     <Play size={15} fill="currentColor" />
                   </button>
                 </div>
@@ -711,10 +703,10 @@ export default function App() {
       )}
       {session && (
         <WorkoutSession
-          key={active}
+          key={`${state.planId}-${active}`}
           workout={workout}
-          done={done}
-          onToggle={toggleExercise}
+          draft={draft}
+          onUpdate={updateSession}
           onGuide={setGuide}
           onFinish={finish}
           onClose={() => setSession(false)}

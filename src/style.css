@@ -3882,3 +3882,42 @@ dialog::backdrop {
     font-size: 11px;
   }
 }
+.storage-warning {
+  margin: 0 0 22px;
+  border: 1px solid #d8b27f;
+  border-radius: 10px;
+  background: #fff0d8;
+  color: #78542c;
+  padding: 16px 20px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.equipment-extras {
+  border: 1px solid #e1e1d4;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 0;
+  background: #fff;
+}
+.equipment-extras legend {
+  padding: 0 5px;
+  color: #6f7764;
+  font-size: 12px;
+}
+.form-fields .equipment-extras label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.form-fields .equipment-extras input {
+  width: 18px;
+  height: 18px;
+  accent-color: #d9562b;
+  flex-shrink: 0;
+}
+.equipment-extras .form-hint {
+  margin-top: 4px;
+}

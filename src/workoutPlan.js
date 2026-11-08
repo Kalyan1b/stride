@@ -17,13 +17,36 @@ export const weekdays = [
   'Sunday',
 ];
 const schedules = { 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 5], 5: [0, 1, 3, 4, 6] };
-const exercise = (name, prescription, focus) => ({ name, prescription, focus });
-export function buildPlan(profile) {
+export const equipmentRequirements = {
+  'Dumbbell bench press': ['dumbbells', 'bench'],
+  'Dumbbell bent-over row': ['dumbbells'],
+  'Dumbbell shoulder press': ['dumbbells'],
+  'Seated cable row': ['cable'],
+  'Goblet squat': ['dumbbells'],
+  'Step-up': ['step'],
+};
+const exercise = (name, prescription, focus) => ({
+  name,
+  prescription,
+  focus,
+  requiredEquipment: equipmentRequirements[name] || [],
+});
+export function availableEquipment(profile) {
+  if (profile.equipment === 'Full gym') return ['dumbbells', 'bench', 'cable', 'step'];
+  return [
+    ...(profile.equipment === 'Dumbbells' ? ['dumbbells'] : []),
+    ...(profile.hasBench ? ['bench'] : []),
+    ...(profile.hasStep ? ['step'] : []),
+  ];
+}
+export function buildPlan(input) {
+  const profile = normalizeProfile(input);
+  const equipment = availableEquipment(profile);
   const home = profile.equipment === 'Bodyweight only';
   const sets = profile.experience === 'Beginner' ? 2 : profile.experience === 'Experienced' ? 4 : 3;
   const upper = [
     exercise(
-      home ? 'Push-up' : 'Dumbbell bench press',
+      home || !equipment.includes('bench') ? 'Push-up' : 'Dumbbell bench press',
       `${sets} sets · 8–12 reps`,
       'Chest & shoulders',
     ),
@@ -64,7 +87,11 @@ export function buildPlan(profile) {
       'Comfortable, conversational pace',
     ),
     exercise('Bird dog', '2 sets · 8 reps / side', 'Core & balance'),
-    exercise('Step-up', '2 sets · 10 reps / side', 'Legs & conditioning'),
+    exercise(
+      equipment.includes('step') ? 'Step-up' : 'Bodyweight squat',
+      '2 sets · 10 reps',
+      'Legs & conditioning',
+    ),
     exercise('Gentle full-body stretch', '5 minutes', 'Mobility & recovery'),
   ];
   const full = [lower[0], upper[0], upper[1], lower[1]];
@@ -134,18 +161,105 @@ export function saveStored(key, value) {
     return false;
   }
 }
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const choices = {
+  goal: ['Build muscle', 'Lose fat', 'Improve endurance', 'Stay active'],
+  experience: ['Beginner', 'Intermediate', 'Experienced'],
+  equipment: ['Full gym', 'Dumbbells', 'Bodyweight only'],
+};
+function numberInRange(value, minimum, maximum, fallback) {
+  if (!['number', 'string'].includes(typeof value) || String(value).trim() === '') return fallback;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= minimum && number <= maximum ? number : fallback;
+}
+export function normalizeProfile(value) {
+  const input = isObject(value) ? value : {};
+  const profile = { ...defaultProfile };
+  profile.name =
+    typeof input.name === 'string' && input.name.trim()
+      ? input.name.trim().slice(0, 30)
+      : defaultProfile.name;
+  profile.height = numberInRange(input.height, 100, 250, defaultProfile.height);
+  profile.weight = numberInRange(input.weight, 30, 350, defaultProfile.weight);
+  for (const [field, options] of Object.entries(choices)) {
+    if (options.includes(input[field])) profile[field] = input[field];
+  }
+  if ([2, 3, 4, 5].includes(Number(input.days))) profile.days = Number(input.days);
+  profile.hasBench = profile.equipment === 'Full gym' || input.hasBench === true;
+  profile.hasStep = profile.equipment === 'Full gym' || input.hasStep === true;
+  return profile;
+}
+export function isValidProfile(value) {
+  if (!isObject(value)) return false;
+  return (
+    typeof value.name === 'string' &&
+    Boolean(value.name.trim()) &&
+    value.name.trim().length <= 30 &&
+    numberInRange(value.height, 100, 250, null) !== null &&
+    numberInRange(value.weight, 30, 350, null) !== null &&
+    Object.entries(choices).every(([field, options]) => options.includes(value[field])) &&
+    [2, 3, 4, 5].includes(Number(value.days))
+  );
+}
+export function isValidDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  if (year < 1900 || year > 9999) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+}
 export function normalizeHistory(history) {
   if (!Array.isArray(history)) return [];
-  return history
-    .map((record) =>
-      typeof record === 'string'
-        ? {
-            id: record,
-            date: record.slice(0, 10),
-            workoutId: Number(record.slice(11)),
-            title: 'Workout completed',
-          }
-        : record,
+  const unique = new Map();
+  for (const entry of history) {
+    const legacy = typeof entry === 'string' && /^(\d{4}-\d{2}-\d{2})-[0-4]$/.test(entry);
+    const item = legacy
+      ? {
+          id: entry,
+          date: entry.slice(0, 10),
+          workoutId: Number(entry.slice(11)),
+          title: 'Workout completed',
+        }
+      : entry;
+    if (
+      !isObject(item) ||
+      typeof item.id !== 'string' ||
+      !item.id.trim() ||
+      item.id.length > 200 ||
+      !isValidDate(item.date)
     )
-    .filter((record) => record && typeof record.date === 'string' && typeof record.id === 'string');
+      continue;
+    if (!Number.isInteger(item.workoutId) || item.workoutId < 0 || item.workoutId > 4) continue;
+    const record = {
+      id: item.id,
+      date: item.date,
+      workoutId: item.workoutId,
+      title:
+        typeof item.title === 'string' && item.title.trim()
+          ? item.title.trim().slice(0, 100)
+          : 'Workout completed',
+    };
+    // Old records have no reliable plan identity. Keep their history without marking a new plan complete.
+    if (typeof item.planId === 'string' && item.planId.length > 0 && item.planId.length <= 200)
+      record.planId = item.planId;
+    if (typeof item.completedAt === 'string' && Number.isFinite(Date.parse(item.completedAt)))
+      record.completedAt = item.completedAt;
+    if (isObject(item.snapshot) && Array.isArray(item.snapshot.exercises)) {
+      record.snapshot = {
+        goal: choices.goal.includes(item.snapshot.goal) ? item.snapshot.goal : '',
+        equipment: choices.equipment.includes(item.snapshot.equipment)
+          ? item.snapshot.equipment
+          : '',
+        exercises: item.snapshot.exercises
+          .filter(
+            (e) => isObject(e) && typeof e.name === 'string' && typeof e.prescription === 'string',
+          )
+          .map((e) => ({ name: e.name.slice(0, 100), prescription: e.prescription.slice(0, 100) })),
+      };
+    }
+    unique.set(record.id, record);
+  }
+  return [...unique.values()];
 }

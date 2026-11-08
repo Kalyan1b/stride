@@ -36,7 +36,7 @@ export default function ExerciseGuide({ name, onClose }) {
       'Place forearms on the floor with elbows beneath shoulders, then extend your legs behind you.';
   if (name === 'Dumbbell shoulder press')
     steps[0] =
-      'Sit tall on a supported bench, feet planted, with dumbbells near shoulder height. You can also perform this standing.';
+      'Stand tall with dumbbells near shoulder height. The video shows an optional seated variation if you have a supported bench.';
   if (name === 'Goblet squat')
     steps[0] =
       'Hold one dumbbell or kettlebell close to your chest, with feet about shoulder width. The demonstration uses a kettlebell.';

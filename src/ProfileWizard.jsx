@@ -28,6 +28,14 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
     heading.current?.focus();
   }, [step]);
   const update = (key, value) => setDraft((prev) => ({ ...prev, [key]: value }));
+  function setEquipment(value) {
+    setDraft((prev) => ({
+      ...prev,
+      equipment: value,
+      hasBench: value === 'Full gym',
+      hasStep: value === 'Full gym',
+    }));
+  }
   function next(e) {
     e.preventDefault();
     if (step < 2) setStep(step + 1);
@@ -160,15 +168,40 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
               </label>
               <label>
                 What equipment can you use?
-                <select
-                  value={draft.equipment}
-                  onChange={(e) => update('equipment', e.target.value)}
-                >
+                <select value={draft.equipment} onChange={(e) => setEquipment(e.target.value)}>
                   <option>Full gym</option>
                   <option>Dumbbells</option>
                   <option>Bodyweight only</option>
                 </select>
               </label>
+              {draft.equipment !== 'Full gym' && (
+                <fieldset className="equipment-extras">
+                  <legend>Any extra equipment?</legend>
+                  {draft.equipment === 'Dumbbells' && (
+                    <>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={draft.hasBench === true}
+                          onChange={(e) => update('hasBench', e.target.checked)}
+                        />{' '}
+                        A stable workout bench
+                      </label>
+                    </>
+                  )}
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={draft.hasStep === true}
+                      onChange={(e) => update('hasStep', e.target.checked)}
+                    />{' '}
+                    A low, stable exercise step
+                  </label>
+                  <p className="form-hint">
+                    Leave these off if you don’t have them. We’ll choose exercises that fit.
+                  </p>
+                </fieldset>
+              )}
               <fieldset className="days-field">
                 <legend>How many days a week?</legend>
                 <div className="day-options">
@@ -187,7 +220,8 @@ export default function ProfileWizard({ profile, firstTime, onSave, onClose }) {
                   ))}
                 </div>
                 <p className="form-hint">
-                  Your plan includes recovery days. You can adjust this anytime.
+                  Your plan includes recovery days. Changing your routine starts a new plan;
+                  completed workouts stay in your history.
                 </p>
               </fieldset>
             </div>

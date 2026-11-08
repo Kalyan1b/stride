@@ -1,16 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, ChevronLeft, Flame, Leaf, Pause, Play, Timer, X } from 'lucide-react';
 import ExercisePreview from './ExercisePreview';
-export default function WorkoutSession({ workout, done, onToggle, onGuide, onFinish, onClose }) {
-  const [index, setIndex] = useState(() =>
-    Math.max(
-      0,
-      workout.exercises.findIndex((_, i) => !done.includes(i)),
-    ),
-  );
-  const [started, setStarted] = useState(done.length > 0),
-    [remaining, setRemaining] = useState(0),
-    [paused, setPaused] = useState(false);
+import { restMilliseconds, startRest, pauseRest, resumeRest } from './appState';
+export default function WorkoutSession({ workout, draft, onUpdate, onGuide, onFinish, onClose }) {
+  const { index, started, done, rest } = draft;
+  const [now, setNow] = useState(Date.now);
+  const remaining = Math.ceil(restMilliseconds(rest, now) / 1000);
+  const paused = rest?.paused === true;
   const ref = useRef(null);
   const heading = useRef(null);
   const exercise = workout.exercises[index];
@@ -21,20 +17,37 @@ export default function WorkoutSession({ workout, done, onToggle, onGuide, onFin
     heading.current?.focus();
   }, [index, started]);
   useEffect(() => {
-    if (remaining <= 0 || paused) return;
-    const timeout = setTimeout(() => setRemaining((n) => Math.max(0, n - 1)), 1000);
-    return () => clearTimeout(timeout);
-  }, [remaining, paused]);
+    if (!rest || rest.paused || restMilliseconds(rest) === 0) return;
+    let timer;
+    const refresh = () => {
+      const current = Date.now();
+      setNow(current);
+      if (restMilliseconds(rest, current) === 0) clearInterval(timer);
+    };
+    refresh();
+    timer = setInterval(refresh, 250);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [rest]);
+  function update(patch) {
+    setNow(Date.now());
+    onUpdate(patch);
+  }
   function complete() {
-    if (!done.includes(index)) onToggle(index);
-    if (index < workout.exercises.length - 1) {
-      setIndex(index + 1);
-      setRemaining(60);
-      setPaused(false);
-    } else {
-      const unfinished = workout.exercises.findIndex((_, i) => i !== index && !done.includes(i));
-      if (unfinished >= 0) setIndex(unfinished);
-    }
+    const checked = done.includes(index) ? done : [...done, index];
+    const unfinished = workout.exercises.findIndex((_, i) => !checked.includes(i));
+    const next =
+      index < workout.exercises.length - 1 ? index + 1 : unfinished >= 0 ? unfinished : index;
+    update({
+      done: checked,
+      index: next,
+      rest: checked.length < workout.exercises.length ? startRest() : null,
+    });
   }
   const allDone = done.length === workout.exercises.length;
   return (
@@ -79,7 +92,7 @@ export default function WorkoutSession({ workout, done, onToggle, onGuide, onFin
                 them.
               </p>
             </div>
-            <button className="primary wide" onClick={() => setStarted(true)}>
+            <button className="primary wide" onClick={() => update({ started: true })}>
               I’m warmed up. Let’s go <ArrowRight size={18} />
             </button>
           </>
@@ -105,8 +118,7 @@ export default function WorkoutSession({ workout, done, onToggle, onGuide, onFin
                   key={item.name}
                   className={`${i === index ? 'current ' : ''}${done.includes(i) ? 'done' : ''}`}
                   onClick={() => {
-                    setIndex(i);
-                    setRemaining(0);
+                    update({ index: i, rest: null });
                   }}
                   aria-label={`Exercise ${i + 1}: ${item.name}${done.includes(i) ? ', complete' : ''}`}
                   aria-current={i === index ? 'step' : undefined}
@@ -144,11 +156,11 @@ export default function WorkoutSession({ workout, done, onToggle, onGuide, onFin
                 </strong>
                 <button
                   aria-label={paused ? 'Resume rest timer' : 'Pause rest timer'}
-                  onClick={() => setPaused(!paused)}
+                  onClick={() => update({ rest: paused ? resumeRest(rest) : pauseRest(rest) })}
                 >
                   {paused ? <Play size={17} /> : <Pause size={17} />}
                 </button>
-                <button className="text-button" onClick={() => setRemaining(0)}>
+                <button className="text-button" onClick={() => update({ rest: null })}>
                   Skip
                 </button>
               </div>
@@ -156,8 +168,7 @@ export default function WorkoutSession({ workout, done, onToggle, onGuide, onFin
               <button
                 className="rest-start"
                 onClick={() => {
-                  setRemaining(60);
-                  setPaused(false);
+                  update({ rest: startRest() });
                 }}
               >
                 <Timer size={16} /> Need a break? Start a 60-second rest
@@ -168,8 +179,7 @@ export default function WorkoutSession({ workout, done, onToggle, onGuide, onFin
                 className="outline"
                 disabled={index === 0}
                 onClick={() => {
-                  setIndex(index - 1);
-                  setRemaining(0);
+                  update({ index: index - 1, rest: null });
                 }}
               >
                 <ChevronLeft size={18} /> Back
@@ -190,7 +200,10 @@ export default function WorkoutSession({ workout, done, onToggle, onGuide, onFin
               )}
             </div>
             {done.includes(index) && (
-              <button className="undo-exercise" onClick={() => onToggle(index)}>
+              <button
+                className="undo-exercise"
+                onClick={() => update({ done: done.filter((i) => i !== index) })}
+              >
                 Undo this exercise’s checkmark
               </button>
             )}
