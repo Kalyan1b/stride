@@ -24,6 +24,9 @@ export const equipmentRequirements = {
   'Seated cable row': ['cable'],
   'Goblet squat': ['dumbbells'],
   'Step-up': ['step'],
+  'Dumbbell Romanian deadlift': ['dumbbells'],
+  'Dumbbell lateral raise': ['dumbbells'],
+  'Dumbbell rear-delt fly': ['dumbbells'],
 };
 const exercise = (name, prescription, focus) => ({
   name,
@@ -96,26 +99,54 @@ export function buildPlan(input) {
   ];
   const full = [lower[0], upper[0], upper[1], lower[1]];
   const mobility = [cardio[3], cardio[1], lower[1], upper[3]];
-  const strengthDays = [
-    ['Upper body & core', upper, 'Strength'],
-    ['Lower body strength', lower, 'Strength'],
-    ['Full-body strength', full, 'Strength'],
-    ['Upper body & core', upper, 'Strength'],
-    ['Strength & mobility', mobility, 'Mobility'],
-  ];
+  // Fixed session variants keep the week interesting without changing on refresh.
+  const hinge = home
+    ? lower[1]
+    : exercise('Dumbbell Romanian deadlift', `${sets} sets · 8–12 reps`, 'Hamstrings & glutes');
+  const splitSquat = exercise('Split squat', `${sets} sets · 8–10 reps / side`, 'Quads & glutes');
+  const calves = exercise('Standing calf raise', '2 sets · 12–20 reps', 'Calves');
+  const lateral = home
+    ? upper[1]
+    : exercise('Dumbbell lateral raise', '2 sets · 10–15 reps', 'Side shoulders');
+  const rear = home
+    ? upper[1]
+    : exercise('Dumbbell rear-delt fly', '2 sets · 10–15 reps', 'Rear shoulders');
+  const upperB = [upper[2], upper[1], home ? upper[0] : rear, upper[3]];
+  const lowerB = [splitSquat, hinge, equipment.includes('step') ? cardio[2] : lower[2], calves];
+  const fullB = [splitSquat, upper[2], upper[1], hinge];
+  const conditioningB = [cardio[0], calves, lower[2], cardio[3]];
+  const conditioningC = [cardio[0], upper[3], splitSquat, cardio[3]];
+  // Two-day muscle plans train the whole body on both days.
+  const strengthDays =
+    profile.days === 2
+      ? [
+          ['Full-body strength', full, 'Strength'],
+          ['Full-body · shoulders & hinge', fullB, 'Strength'],
+        ]
+      : [
+          [
+            home ? 'Upper body & core' : 'Upper body strength',
+            [upper[0], upper[1], upper[2], home ? upper[3] : lateral],
+            'Strength',
+          ],
+          ['Lower body strength', [lower[0], hinge, lower[2], calves], 'Strength'],
+          ['Full-body strength', full, 'Strength'],
+          ['Shoulders & upper body', upperB, 'Strength'],
+          ['Lower body · single-leg focus', lowerB, 'Strength'],
+        ];
   const balancedDays = [
     ['Full-body strength', full, 'Strength'],
     ['Cardio & core', cardio, 'Cardio'],
-    ['Lower body strength', lower, 'Strength'],
-    ['Easy conditioning', cardio, 'Cardio'],
+    ['Lower body strength', lowerB, 'Strength'],
+    ['Easy conditioning', conditioningB, 'Cardio'],
     ['Strength & mobility', mobility, 'Mobility'],
   ];
   const enduranceDays = [
     ['Cardio & core', cardio, 'Cardio'],
     ['Full-body strength', full, 'Strength'],
-    ['Steady cardio & mobility', cardio, 'Cardio'],
+    ['Steady cardio & mobility', conditioningC, 'Cardio'],
     ['Strength & mobility', mobility, 'Mobility'],
-    ['Easy conditioning', cardio, 'Cardio'],
+    ['Easy conditioning', conditioningB, 'Cardio'],
   ];
   const days = schedules[Number(profile.days)] || schedules[3];
   const workouts =

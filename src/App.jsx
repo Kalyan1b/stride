@@ -428,7 +428,10 @@ export default function App() {
                 </div>
                 <div className="week-tip">
                   <Leaf size={14} />
-                  <span>The days are a guide. Move a session to a day that works for you.</span>
+                  <span>
+                    Different session focuses, repeatable progress. Keep these movements for 4–6
+                    weeks and leave a recovery day between hard sessions for the same muscles.
+                  </span>
                 </div>
               </section>
               <section className="workout-card" aria-labelledby="selected-workout-title">
@@ -459,7 +462,9 @@ export default function App() {
                 <div className="warmup-note">
                   <Flame size={17} />
                   <span>
-                    <b>First, warm up.</b> Take 5 minutes to walk, loosen up, and get ready.
+                    <b>First, warm up.</b> Take 5 minutes to walk and rehearse the movements with
+                    easy reps. Choose a difficulty that leaves about 2 good reps in reserve;
+                    increase gradually when all sets reach the top of the rep range.
                   </span>
                 </div>
                 <div className="exercise-list">

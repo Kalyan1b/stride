@@ -4,7 +4,17 @@ import { exerciseGuides as entries, guideSlug } from './exerciseData';
 import mediaCatalog from './realExerciseMedia.json';
 import { publicAsset } from './assets';
 
-const tutorials = {
+export const tutorials = {
+  'Dumbbell Romanian deadlift': [
+    { id: 'KrRtk8KbJik', title: 'Dumbbell Romanian Deadlift', creator: 'Peak Human Performance' },
+  ],
+  'Split squat': [{ id: '4bNQITw0VdY', title: 'How to Perform Split Squats', creator: 'E3 Rehab' }],
+  'Standing calf raise': [
+    { id: 'IphGZ8OlfYg', title: 'Single Leg Calf Raise (progression)', creator: 'PureGym' },
+  ],
+  'Dumbbell rear-delt fly': [
+    { id: 'nlkF7_2O_Lw', title: 'How to Do a Rear Delt Fly', creator: 'PureGym' },
+  ],
   'Bird dog': [{ id: 'egKWoMZ6cXM', title: 'Bird Dog', creator: 'E3 Rehab Exercise Library' }],
   'Pike push-up': [
     { id: 'lIZ_C4VJnmc', title: 'Pike Pushup Tutorial', creator: 'Chris Calisthenics' },

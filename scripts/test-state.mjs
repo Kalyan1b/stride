@@ -165,6 +165,19 @@ for (const goal of ['Build muscle', 'Lose fat', 'Improve endurance', 'Stay activ
           const available = availableEquipment(profile);
           const plan = buildPlan(profile);
           assert.equal(plan.length, days);
+          assert.deepEqual(
+            plan,
+            buildPlan(profile),
+            'Session variety must stay stable across refreshes',
+          );
+          const sessionLists = plan.map((workout) =>
+            workout.exercises.map((item) => item.name).join('|'),
+          );
+          assert.equal(
+            new Set(sessionLists).size,
+            days,
+            'Every scheduled session needs a distinct exercise list',
+          );
           for (const workout of plan) {
             assert.equal(new Set(workout.exercises.map((item) => item.name)).size, 4);
             for (const exercise of workout.exercises) {
@@ -179,4 +192,21 @@ for (const goal of ['Build muscle', 'Lose fat', 'Improve endurance', 'Stay activ
         }
 console.log(
   `PASS: unique session history, plan versions and snapshots, migration, invalid saved data, refresh recovery, deadline timers, and ${configurations} equipment configurations.`,
+);
+
+const muscleWeek = buildPlan({ ...defaultProfile, days: 5 });
+const names = new Set(muscleWeek.flatMap((workout) => workout.exercises.map((item) => item.name)));
+for (const name of [
+  'Dumbbell Romanian deadlift',
+  'Split squat',
+  'Standing calf raise',
+  'Dumbbell lateral raise',
+  'Dumbbell rear-delt fly',
+]) {
+  assert.ok(names.has(name), `Missing leg or shoulder coverage: ${name}`);
+}
+const twiceWeekly = buildPlan({ ...defaultProfile, days: 2 });
+assert.ok(twiceWeekly.every((workout) => workout.title.startsWith('Full-body')));
+console.log(
+  'PASS: distinct stable sessions, leg/shoulder coverage, and two-day full-body training.',
 );

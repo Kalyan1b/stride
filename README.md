@@ -41,7 +41,7 @@ Promotion follows **dev → test → main**, through pull requests. There is no 
 
 Profiles, completed sessions, and unfinished workouts stay in this browser's localStorage. No account or backend is required. Refreshing or reopening the app recovers your selected workout, checkmarks, position, and rest timer. Each completion gets its own history record and a snapshot of the plan used. Changing training preferences starts a new plan without assigning old completion checkmarks to it; changing your name or measurements keeps your current plan. Older profile/history keys are read during migration and retained as an original backup. The planner is intended for adults and provides general fitness guidance.
 
-Guides contain 9 full-motion GIFs, 4 photographic pose sequences, and 4 hosted instructor videos. GIFs and photos are local assets; hosted videos require internet access. Reduced-motion users see still images until they choose playback.
+Guides contain 9 full-motion GIFs, 5 photographic pose sequences, and 8 hosted instructor videos. GIFs and photos are local assets; hosted videos require internet access. Reduced-motion users see still images until they choose playback.
 
 Credits, sources, and media licenses appear in the guides and [the attribution catalog](public/exercises/ATTRIBUTION.json). Goulart's wger video derivatives retain CC BY-SA 4.0; public-domain sources are identified separately. These media licenses do not determine the application code's license.
 
@@ -52,3 +52,9 @@ Dumbbell and bodyweight profiles can explicitly select a bench or a low exercise
 State is saved together under `stride-state-v2`. Invalid profile fields fall back to valid values; invalid dates and malformed history entries are filtered without crashing. Legacy sessions remain visible in history but are not guessed to belong to a new plan. If browser storage fails, a persistent warning explains that changes are available only for the current visit. Clearing browser storage still removes local records.
 
 Rest timers use a deadline so delayed callbacks do not extend the rest. Paused timers retain their remaining time across refreshes.
+
+## Exercise variety
+
+Each scheduled day has a distinct, deterministic exercise list. Muscle plans use two full-body sessions for two-day schedules, or upper/lower/full-body plus shoulder and single-leg variants for longer schedules. New movements include dumbbell Romanian deadlifts, floor split squats, standing calf raises, dumbbell lateral raises, and standing rear-delt flies; inclusion depends on equipment, goal, and days available. Bodyweight plans retain suitable unloaded alternatives.
+
+Keep the same program for 4–6 weeks to compare progress; increase difficulty gradually when you reach the top of the prescribed range with good form. The app does not track weights or automatically increase loads. The approach prioritizes consistency, appropriate effort, and repeatable movements, informed by [ACSM's 2026 guidance](https://acsm.org/resistance-training-guidelines-update-2026/). Guide instructions distinguish optional seated, single-leg, and elevated-foot demonstrations from the assigned variations.

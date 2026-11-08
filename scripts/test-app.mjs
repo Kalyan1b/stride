@@ -85,7 +85,12 @@ const artifact = new URL('../.form-app-test.mjs', import.meta.url);
 let root;
 try {
   await build({
-    entryPoints: [new URL('../src/App.jsx', import.meta.url).pathname],
+    stdin: {
+      contents:
+        "export {default} from './App.jsx'; export {default as ExerciseGuide} from './ExerciseGuide.jsx';",
+      resolveDir: new URL('../src/', import.meta.url).pathname,
+      loader: 'jsx',
+    },
     outfile: artifact.pathname,
     bundle: true,
     platform: 'node',
@@ -94,7 +99,7 @@ try {
     logLevel: 'silent',
     define: { 'import.meta.env.BASE_URL': JSON.stringify('/stride/') },
   });
-  const { default: App } = await import(artifact.href);
+  const { default: App, ExerciseGuide } = await import(artifact.href);
   const click = async (element) => {
     assert.ok(element, 'Expected a clickable element');
     await act(async () => element.click());
@@ -281,6 +286,31 @@ try {
   await act(async () => root.render(React.createElement(App)));
   assert.ok(document.querySelector('.storage-warning[role="alert"]'));
   globalThis.localStorage = realStorage;
+  // Open every new demonstration and exercise its playback path.
+  for (const name of [
+    'Dumbbell Romanian deadlift',
+    'Split squat',
+    'Standing calf raise',
+    'Dumbbell lateral raise',
+    'Dumbbell rear-delt fly',
+  ]) {
+    await act(async () =>
+      root.render(React.createElement(ExerciseGuide, { key: name, name, onClose() {} })),
+    );
+    assert.equal(document.querySelector('#guide-title').textContent, name);
+    assert.ok(document.querySelector('.guide-dialog[open]'));
+    await click(button('Play'));
+    if (name === 'Dumbbell lateral raise') {
+      assert.ok(
+        document.querySelector('.real-demo-stage img').src.endsWith('dumbbell-lateral-raise.gif'),
+      );
+    } else {
+      const frame = document.querySelector('iframe');
+      assert.ok(frame.src.startsWith('https://www.youtube-nocookie.com/embed/'));
+      assert.ok(!frame.src.includes('undefined'));
+    }
+  }
+  console.log('PASS: all five new exercise guides open and play their attributed demonstrations.');
   console.log(
     'PASS: setup, demonstrations, refresh recovery, paused rest recovery, repeated sessions, plan-change history, corrupt-data recovery, and visible storage failures.',
   );

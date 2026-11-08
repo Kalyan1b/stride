@@ -140,5 +140,15 @@
     "licenseUrl": "https://unlicense.org/",
     "changes": "Two original photos resized and combined into a looping pose sequence.",
     "images": ["Walking_Treadmill/0.jpg", "Walking_Treadmill/1.jpg"]
+  },
+  "dumbbell-lateral-raise": {
+    "kind": "poses",
+    "view": "Start and finish positions",
+    "source": "https://github.com/yuhonas/free-exercise-db/tree/main/exercises/Side_Lateral_Raise",
+    "credit": "Free Exercise DB contributors",
+    "license": "Public domain / Unlicense",
+    "licenseUrl": "https://unlicense.org/",
+    "changes": "Two original photos resized and combined into a looping pose sequence.",
+    "images": ["Side_Lateral_Raise/0.jpg", "Side_Lateral_Raise/1.jpg"]
   }
 }

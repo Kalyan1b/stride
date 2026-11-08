@@ -529,6 +529,63 @@ const entries = {
     'This animation shows the overhead reach only. Avoid bouncing or painful stretching.',
   ],
 };
+Object.assign(entries, {
+  'Dumbbell Romanian deadlift': [
+    null,
+    null,
+    'Standing hip hinge',
+    [
+      'Stand with feet hip-width apart, dumbbells close to your thighs and knees slightly bent.',
+      'Push your hips back, keeping your back steady and weights close. Stop when you feel a comfortable hamstring stretch; reaching the floor is unnecessary.',
+      'Press through your feet and bring your hips forward to stand. Lower with control on the next rep.',
+    ],
+    'Start light. Keep the slight knee bend throughout and avoid rounding your back or leaning back at the top.',
+  ],
+  'Split squat': [
+    null,
+    null,
+    'Both feet on the floor',
+    [
+      'Take a staggered stance with both feet on the floor, wide enough side-to-side to balance.',
+      'Bend both knees and lower straight down through a comfortable range, keeping your front foot planted.',
+      'Push through the front foot to stand. Finish your reps before switching sides.',
+    ],
+    'Use a wall for balance if needed. Begin with the standard floor version shown early in the tutorial; no jumping or elevated rear foot is needed.',
+  ],
+  'Standing calf raise': [
+    null,
+    null,
+    'Floor variation',
+    [
+      'Stand on level ground with feet hip-width apart, using a wall lightly for balance.',
+      'Lift your heels slowly, keeping weight over the balls of your feet, and pause briefly.',
+      'Lower your heels to the floor with control. Repeat without bouncing.',
+    ],
+    'Start with both feet and bodyweight. The video shows the harder single-leg variation; keep both feet down until ready.',
+  ],
+  'Dumbbell lateral raise': [
+    null,
+    null,
+    'Standing side raise',
+    [
+      'Stand tall with light dumbbells beside your hips and a soft bend in your elbows.',
+      'Raise your arms out slightly forward of your sides, stopping around shoulder height or lower if more comfortable.',
+      'Lower slowly without swinging your torso or shrugging your shoulders.',
+    ],
+    'Use lighter weights than your shoulder press. Keep wrists neutral and move through a comfortable range.',
+  ],
+  'Dumbbell rear-delt fly': [
+    null,
+    null,
+    'Standing bent-over variation',
+    [
+      'Stand with soft knees and hinge forward, holding light dumbbells below your chest with your back steady.',
+      'With elbows slightly bent, open your arms out to the sides until roughly in line with your torso.',
+      'Lower with control, keeping your torso still throughout.',
+    ],
+    'The instructor shows an optional seated version. Use the standing hinge with no bench, and avoid swinging or lifting above your torso.',
+  ],
+});
 export const exerciseGuides = entries;
 
 export const guideSlug = (name) =>
